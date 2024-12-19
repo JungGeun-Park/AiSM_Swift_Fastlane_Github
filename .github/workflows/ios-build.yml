@@ -23,9 +23,7 @@ jobs:
       # 3. Set up Signing Credentials
       - name: Set up Signing Credentials
         run: |
-          echo "${{ secrets.CERTIFICATE_P12_BASE64 }}" | base64 --decode > certificate.p12
-          security create-keychain -p "temp_password" temp.keychain
-          security import certificate.p12 -k temp.keychain -P "${{ secrets.CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
+          security import ./certificate.p12 -k temp.keychain -P "123456" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "temp_password" temp.keychain
           security list-keychains -s temp.keychain
           security unlock-keychain -p "temp_password" temp.keychain
