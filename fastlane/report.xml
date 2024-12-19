@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="fastlane.lanes">
+    
+    
+    
+      
+      <testcase classname="fastlane.lanes" name="0: default_platform" time="0.000182">
+        
+      </testcase>
+    
+      
+      <testcase classname="fastlane.lanes" name="1: xcodebuild -list -project AiSM_Swift_Fastlane_Github.xcodeproj | grep &apos;Schemes:&apos; -A 1 | tail -n 1" time="0.491159">
+        
+      </testcase>
+    
+      
+      <testcase classname="fastlane.lanes" name="2: xcodebuild -showBuildSettings -scheme AiSM_Swift_Fastlane_Github | grep &apos;PRODUCT_BUNDLE_IDENTIFIER&apos; | awk -F &apos; = &apos; &apos;{print $2}&apos;" time="0.628125">
+        
+      </testcase>
+    
+      
+      <testcase classname="fastlane.lanes" name="3: xcodebuild -showBuildSettings -scheme AiSM_Swift_Fastlane_Github | grep &apos;DEVELOPMENT_TEAM&apos; | awk -F &apos; = &apos; &apos;{print $2}&apos;" time="0.633127">
+        
+      </testcase>
+    
+      
+      <testcase classname="fastlane.lanes" name="4: build_ios_app" time="25.315129">
+        
+      </testcase>
+    
+      
+      <testcase classname="fastlane.lanes" name="5: chmod +x &apos;/Users/puzznic/Project/AiSM_Swift_Fastlane_Github/AppSealingSDK/Tools/generate_hash&apos;" time="0.009202">
+        
+      </testcase>
+    
+      
+      <testcase classname="fastlane.lanes" name="6: &apos;/Users/puzznic/Project/AiSM_Swift_Fastlane_Github/AppSealingSDK/Tools/generate_hash&apos; &apos;/Users/puzznic/Project/AiSM_Swift_Fastlane_Github/build/AiSM_Swift_Fastlane_Github.ipa&apos;" time="2.760998">
+        
+      </testcase>
+    
+      
+      <testcase classname="fastlane.lanes" name="7: upload_to_testflight" time="34.729228">
+        
+      </testcase>
+    
+  </testsuite>
+</testsuites>

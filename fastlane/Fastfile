@@ -1,0 +1,143 @@
+# This file contains the fastlane.tools configuration
+# You can find the documentation at https://docs.fastlane.tools
+#
+# For a list of all available actions, check out
+#
+#     https://docs.fastlane.tools/actions
+#
+# For a list of all available plugins, check out
+#
+#     https://docs.fastlane.tools/plugins/available-plugins
+#
+
+# Uncomment the line if you want fastlane to automatically update itself
+# update_fastlane
+
+default_platform(:ios)
+
+before_all do
+  ENV["FASTLANE_USER"] = "puzznic@inka.co.kr"
+  ENV["FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD"] = "fcgx-cbfb-jsez-zbir"
+  ENV['PROFILE'] = "AppSealing Wildcard Distribution Profile"
+end
+
+platform :ios do
+  desc "Push a new beta build to TestFlight"
+  lane :beta do
+    # 프로젝트 루트 경로 가져오기 (Fastfile 기준 상위 디렉토리)
+    project_root = File.expand_path("..", __dir__)
+
+    # Xcode 프로젝트(.xcodeproj) 또는 워크스페이스(.xcworkspace) 파일 자동 검색
+    xcode_file_path = Dir.glob(File.join(project_root, "*.xcworkspace")).first || Dir.glob(File.join(project_root, "*.xcodeproj")).first
+    if xcode_file_path.nil?
+      UI.user_error!("[AppSealing] No Xcode project or workspace found in the project root directory: #{project_root}")
+    end
+
+    # 프로젝트 이름 및 스킴 자동 추출
+    project_name = File.basename(xcode_file_path, File.extname(xcode_file_path)) # 확장자를 제거한 프로젝트 이름
+
+    # 스킴 자동 검색
+    scheme_name = ""
+    Dir.chdir(File.dirname(xcode_file_path)) do
+      scheme_name = sh("xcodebuild -list -#{xcode_file_path.end_with?('.xcworkspace') ? 'workspace' : 'project'} #{File.basename(xcode_file_path)} | grep 'Schemes:' -A 1 | tail -n 1").strip
+    end
+
+    if scheme_name.empty?
+      UI.user_error!("[AppSealing] Failed to retrieve scheme name from Xcode project or workspace.")
+    end
+
+    UI.message "[AppSealing] Project Name: #{project_name}"
+    UI.message "[AppSealing] Scheme Name: #{scheme_name}"
+
+    # 번들 ID 동적으로 추출
+    bundle_id = ""
+    Dir.chdir(File.dirname(xcode_file_path)) do
+      bundle_id_command = "xcodebuild -showBuildSettings -scheme #{scheme_name} | grep 'PRODUCT_BUNDLE_IDENTIFIER' | awk -F ' = ' '{print $2}'"
+      bundle_id_output = sh(bundle_id_command).lines.map(&:strip).reject { |line| line.include?("WARNING") || line.empty? }
+      bundle_id = bundle_id_output.last.strip
+    end
+
+    if bundle_id.empty?
+      UI.user_error!("[AppSealing] Failed to retrieve Bundle ID from Xcode project.")
+    end
+
+    UI.message "[AppSealing] Bundle ID: #{bundle_id}"
+
+    # Team ID 동적으로 추출
+    team_id = ""
+    Dir.chdir(File.dirname(xcode_file_path)) do
+      team_id_command = "xcodebuild -showBuildSettings -scheme #{scheme_name} | grep 'DEVELOPMENT_TEAM' | awk -F ' = ' '{print $2}'"
+      team_id_output = sh(team_id_command).lines.map(&:strip).reject { |line| line.include?("WARNING") || line.empty? }
+      team_id = team_id_output.last.strip
+    end
+
+    if team_id.empty?
+      UI.user_error!("[AppSealing] Failed to retrieve Team ID from Xcode project.")
+    end
+
+    UI.message "[AppSealing] Team ID: #{team_id}"
+
+    # 빌드 및 IPA 파일 생성
+    archive_path = File.join(project_root, "build", "#{project_name}.xcarchive")
+    ipa_output_path = File.join(project_root, "build")
+
+    build_ios_app(
+      scheme: scheme_name,
+      export_method: "app-store",
+      clean: true,
+      output_directory: ipa_output_path,
+      output_name: "#{project_name}.ipa",
+      workspace: xcode_file_path.end_with?(".xcworkspace") ? xcode_file_path : nil,
+      project: xcode_file_path.end_with?(".xcodeproj") ? xcode_file_path : nil,
+      export_options: {
+        provisioningProfiles: {
+          bundle_id => ENV["PROFILE"]
+        }
+      }
+    )
+
+    # .ipa 파일 경로 설정
+    ipa_path = File.join(ipa_output_path, "#{project_name}.ipa")
+
+    unless File.exist?(ipa_path)
+      UI.user_error!("[AppSealing] IPA file not found at path: #{ipa_path}")
+    end
+
+    UI.message "[AppSealing] IPA Path: #{ipa_path}"
+
+    # generate_hash 스크립트 경로 동적 검색
+    generate_hash_script = File.join(project_root, "AppSealingSDK", "Tools", "generate_hash")
+    unless File.exist?(generate_hash_script)
+      UI.user_error!("[AppSealing] generate_hash script not found at path: #{generate_hash_script}")
+    end
+    
+    # 실행 권한 확인 및 설정
+    unless File.executable?(generate_hash_script)
+      sh("chmod +x '#{generate_hash_script}'")
+    end    
+    sh("'#{generate_hash_script}' '#{File.absolute_path(ipa_path)}'")
+
+     # Step 2: Upload the IPA to TestFlight with callback
+    begin
+      upload_to_testflight(
+        ipa: ipa_path,
+        skip_waiting_for_build_processing: true, # 빌드 처리 대기 시간 생략
+      )      
+      UI.success("[AppSealing] Upload to TestFlight completed successfully!")
+      
+    rescue => e
+      UI.error("[AppSealing] Upload to TestFlight failed with error: #{e.message}")
+      raise e
+      
+    ensure
+      # Always delete the build directory, even if an error occurs
+      if Dir.exist?(ipa_output_path)
+        UI.message("[AppSealing] Deleting build directory: #{ipa_output_path}")
+        FileUtils.rm_rf(ipa_output_path)
+        UI.message("[AppSealing] Build directory deleted.")
+      else
+        UI.message("[AppSealing] Build directory not found or already deleted.")
+      end
+    end
+  end
+end

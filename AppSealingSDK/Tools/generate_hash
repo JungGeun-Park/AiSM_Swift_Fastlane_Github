@@ -2,7 +2,7 @@
 
 =begin
 ============================================================================================
-|  AppSealing iOS SDK Hash Generator V1.2.2                                                |
+|  AppSealing iOS SDK Hash Generator V1.10.0                                                |
 |                                                                                          |
 |  * presented by Inka Entworks                                                            |
 ============================================================================================
@@ -16,6 +16,8 @@ require 'json'
 require 'io/console'
 require 'xcodeproj'
 require 'open-uri'
+require 'rexml/document'
+include REXML
 
 def internet_connection?
   begin
@@ -37,7 +39,7 @@ $enc_strings = {}
 LOCAL_TEST = false
 
 
-$baseURL = 'https://api.appsealing.com/covault/gw/'
+$baseURL = 'https://api.appsealing.com/covault/gw/' #MUST KEEP THIS COMMENT #AS_REPLACED_URL_PLACE_BY_API 
 $position = 0
 $isUnreal = false
 $isXamarin = false
@@ -291,7 +293,7 @@ end
 #  원본 코드 복원
 #--------------------------------------------------------------------------------------------
 def restore_original_code( path )
-    return if !File.exists?( path + '.org' )
+    return if !File.exist?( path + '.org' )
     puts '## Restore : ' + path + '.org ==> ' + path
     system( 'mv "' + path + '.org" "' + path + '"' )
 end
@@ -307,10 +309,10 @@ def string_encryption_main()
 		exit( 0 )
 	end
 
-	if $project_path == nil or $project_path == '' or !File.exists?( $project_path )
+	if $project_path == nil or $project_path == '' or !File.exist?( $project_path )
 		$project_path = File.dirname( File.dirname( __dir__ ))
 	end
-	if !File.exists?( $project_path )
+	if !File.exist?( $project_path )
 		puts "error: Invalid project path : " + $project_path
 		exit( 0 )
 	end
@@ -342,11 +344,11 @@ def string_encryption_main()
 	#puts '### Process : ' + target.to_s
 
 	#-------------------------------------------------------------------------- check AppSealing SDK
-	if !File.exists?( $project_path + '/AppSealingSDK/Libraries/appsealing.lic' )
+	if !File.exist?( $project_path + '/AppSealingSDK/Libraries/appsealing.lic' )
 		puts "error: Cannon find AppSealing license file, check AppSealing SDK files : " + $project_path
 		exit( 0 )
 	end
-	if !File.exists?( $project_path + '/AppSealingSDK/Libraries/AppsealingiOS.mm' )
+	if !File.exist?( $project_path + '/AppSealingSDK/Libraries/AppsealingiOS.mm' )
 		puts "error: Cannon find AppsealingiOS.mm interface file, check AppSealing SDK files : " + $project_path
 		exit( 0 )
 	end
@@ -368,7 +370,7 @@ def string_encryption_main()
 	end
 
 	sources.select { |path|
-		next if !File.exists?( path )
+		next if !File.exist?( path )
 		if $action == 'restore'
 			$source_path << path
 			next
@@ -410,7 +412,7 @@ def generate_hash_snapshot( path )
 	expect_data = false
 	snapshot = ""
 
-	begin
+	# begin
 		file = File.open( path )
 		file.each_line do |line|
 			sline = line.strip
@@ -439,12 +441,12 @@ def generate_hash_snapshot( path )
 				next
 			end
 		end
-	rescue => e
-		puts ".\n.\nInvalid IPA file has passed to an argument, check your IPA file and try again.\n.\n.\n"
-		exit( false )
-	ensure
+	# rescue => e
+	# 	puts ".\n.\nInvalid IPA file has passed to an argument, check your IPA file and try again.\n.\n.\n"
+	# 	exit( false )
+	# ensure
 		file.close unless file.nil?
-	end
+	# end
 	return snapshot
 end
 
@@ -467,6 +469,7 @@ def sign_app_payload( _app, folder, generate_info_only )
 			# 3. entitlement 생성
 			if $Entitlements == '' then
 				system( "/usr/libexec/PlistBuddy -x -c 'Print :Entitlements' " + folder + "provision.plist > " + folder + "entitlements.plist" )
+				# system( "cat " + folder + "entitlements.plist" )
 			else
 				system( 'cp "' + $Entitlements + '" ' + folder + 'entitlements.plist' )
 			end
@@ -512,7 +515,7 @@ def sign_app_payload( _app, folder, generate_info_only )
 			puts "** App's certificate : " + cert
 			puts "** System keychain's certificate : "
 			system( "security find-identity -v -p codesigning" )
-			exit( false )
+			# exit( false )
 		end
 		file.close unless file.nil?
 	
@@ -608,7 +611,6 @@ def get_accountID_hash_from_unreal_executable( path )
 
 	if !parse_finished then
 		puts ".\n.\nCannot extract AppSealing license. Please check if you included the license file in the build."
-		puts "[Error] " + e.to_s + "\n"
 		puts "If this error occurs continuously, contact AppSealing Help Center.\n.\n.\n"
 		exit( false )
 	end
@@ -754,6 +756,268 @@ end
 
 
 #--------------------------------------------------------------------------------------------
+# PlistManager 클래스는 plist 파일을 관리하는 기능을 제공합니다.
+# plist 파일은 XML 형식으로 저장되며, 이 클래스는 파일 읽기, 쓰기, 수정 등의 작업을 수행합니다.
+#--------------------------------------------------------------------------------------------
+class PlistManager
+	def initialize(file_path)
+		@file_path = file_path # plist 파일 경로를 인스턴스 변수로 저장
+		@doc = nil             # plist 파일의 XML 데이터를 저장할 변수
+		load_file              # 파일을 로드하여 XML 문서를 초기화
+	end
+
+	# plist 파일을 읽어 XML 문서를 메모리에 로드합니다.
+	def load_file
+		File.open(@file_path, 'r') do |file|
+			@doc = REXML::Document.new(file) # XML 문서 객체 생성
+		end
+		rescue StandardError => e
+		puts "Error loading file: #{e.message}" # 파일 읽기 실패 시 에러 메시지 출력
+		exit(false)
+	end
+
+	# 현재 메모리에 로드된 XML 문서를 plist 파일에 저장합니다.
+	def save_file
+		File.open(@file_path, 'w') do |file|
+			formatter = REXML::Formatters::Pretty.new(4) # 들여쓰기 4칸 설정
+			formatter.compact = true                     # 빈 줄 제거
+			formatter.write(@doc, file)
+		end
+
+		# 저장된 파일을 다시 읽어와서 XML 선언 부분의 작은따옴표를 큰따옴표로 변환
+		content = File.read(@file_path)
+		content.gsub!(/<\?xml version='1\.0' encoding='UTF-8'\?>/, '<?xml version="1.0" encoding="UTF-8"?>')
+		content.gsub!(/<plist version='1\.0'>/, '<plist version="1.0">')
+		File.write(@file_path, content)
+	rescue StandardError => e
+		puts "Error saving file: #{e.message}"
+		exit(false)
+	end
+
+	# 특정 key의 값을 업데이트하거나 새로 추가합니다.
+	# value가 nil이면 해당 key를 plist에서 제거합니다.
+	def update_key(key, value)
+		element = REXML::XPath.first(@doc, "//key[text()='#{key}']") # key를 찾음
+	
+		if value.nil?
+		# value가 nil이면 key와 값을 삭제
+		remove_key(element) if element
+		elsif element
+		# key가 존재하면 값 업데이트
+		next_element = element.next_element
+	
+		if next_element && next_element.name == 'string' && value.is_a?(String)
+			# 기존 값이 문자열일 경우 업데이트
+			next_element.text = value
+		elsif next_element && next_element.name == 'array' && value.is_a?(Array)
+			# 기존 값이 배열일 경우 교체
+			replace_array_values(next_element, value)
+		else
+			# 기존 값이 다른 타입이면 교체
+			replace_value(element, value)
+		end
+		else
+		# key가 없으면 새로 추가
+		add_new_key(key, value)
+		end
+	end
+	
+	# 특정 key의 값을 읽어옵니다.
+	def read(key)
+		element = REXML::XPath.first(@doc, "//key[text()='#{key}']")
+		return nil unless element
+	
+		next_element = element.next_element
+	
+		case next_element.name
+		when 'string'
+		  next_element.text # 문자열 값을 반환
+		when 'array'
+		  next_element.elements.map(&:text) # 배열 값을 반환 (각 요소의 텍스트)
+		when 'true'
+		  true # <true/> 값을 처리
+		when 'false'
+		  false # <false/> 값을 처리
+		else
+		  nil # 처리하지 않는 타입의 경우 nil 반환
+		end
+	end
+
+	# 특정 key의 배열 값 중 지정된 인덱스를 수정하거나 제거합니다.
+	def update_array_value(key, index, value)
+		element = XPath.first(@doc, "//key[text()='#{key}']")
+		return unless element
+	
+		array_element = element.next_element if element.next_element.name == 'array'
+		return unless array_element
+	
+		array_items = array_element.elements.to_a
+		if index < array_items.size && index >= 0
+			if value.nil?
+				# value가 nil이면 해당 인덱스의 요소를 제거
+				array_element.delete(array_items[index])
+			else
+				# value가 nil이 아니면 해당 인덱스의 값을 수정
+				array_items[index].text = value
+			end
+		else
+			puts "Index out of bounds" # 인덱스가 유효하지 않으면 메시지 출력
+		end
+	end
+	
+	# 특정 key의 배열에 value를 포함하는 값이 있는지 확인하고, 인덱스를 반환합니다.
+	def array_contains?(key, value)
+		element = XPath.first(@doc, "//key[text()='#{key}']")
+		return -1 unless element
+	
+		array_element = element.next_element if element.next_element.name == 'array'
+		return -1 unless array_element
+	
+		array_values = array_element.elements.to_a.map(&:text) # 배열의 모든 텍스트 요소 가져오기
+		array_values.each_with_index do |item, index|
+			return index if item.include?(value) # value를 포함하는 값이 있으면 인덱스 반환
+		end
+	
+		-1 # value를 포함하는 값이 없으면 -1 반환
+	end
+
+	# 특정 key의 배열에서 org_value를 포함하는 모든 값을 new_value로 변경합니다.
+	def update_or_remove_array_value(key, org_value, new_value)
+		element = REXML::XPath.first(@doc, "//key[text()='#{key}']")
+		return unless element
+	  
+		array_element = element.next_element if element.next_element&.name == 'array'
+		return unless array_element
+	  
+		# 배열 요소를 복사하여 안전하게 순회
+		array_items = array_element.elements.to_a.dup
+		array_items.each do |item|
+			if item.text.include?(org_value)
+				if new_value.nil?
+					array_element.delete(item) # org_value를 포함하는 항목 삭제
+				else
+					item.text = new_value # org_value를 포함하는 항목을 new_value로 변경
+				end
+		  	end
+		end
+	end
+	  
+	def update_url_scheme(new_scheme)
+		# Locate CFBundleURLTypes array
+		url_types_array = XPath.first(@doc, "//key[text()='CFBundleURLTypes']/following-sibling::array")
+		
+		if url_types_array
+		  # Locate the first dict element in CFBundleURLTypes array
+		  dict_element = url_types_array.elements["dict"]
+		  if dict_element
+			# Locate CFBundleURLSchemes array within the dict
+			schemes_key = dict_element.elements["key[text()='CFBundleURLSchemes']"]
+			schemes_array = schemes_key&.next_element
+	
+			if schemes_array && schemes_array.name == "array"
+			  # Replace existing schemes with the new scheme
+			  schemes_array.elements.each { |e| schemes_array.delete(e) }
+			  schemes_array.add_element("string").text = new_scheme
+			else
+			  # If CFBundleURLSchemes doesn't exist, create it
+			  new_schemes_key = Element.new("key")
+			  new_schemes_key.text = "CFBundleURLSchemes"
+			  new_schemes_array = Element.new("array")
+			  new_schemes_array.add_element("string").text = new_scheme
+	
+			  dict_element.add_element(new_schemes_key)
+			  dict_element.add_element(new_schemes_array)
+			end
+		  else
+			puts "No <dict> element found under CFBundleURLTypes."
+		  end
+		else
+		  puts "No CFBundleURLTypes found in the plist."
+		end
+	end
+
+	# plist 파일의 내용을 콘솔에 출력합니다.
+	def print
+		puts '======================================================================================================================='
+		formatter = REXML::Formatters::Pretty.new(4) # 들여쓰기 4칸 설정
+		formatter.compact = true # 빈 줄 제거
+		formatter.write(@doc, $stdout) # 콘솔에 출력
+		puts # 줄바꿈 추가 (출력 후)
+		puts '-----------------------------------------------------------------------------------------------------------------------'
+	end
+
+	private
+	
+	# 기존 key에 문자열 요소를 추가합니다.
+	def add_string_element(key_element, value)
+	  dict_element = key_element.parent          # 부모 <dict> 요소를 가져옴
+	  dict_element.add_element('string').text = value # 새로운 <string> 요소 추가 및 값 설정 
+	end
+
+	# Helper 메소드: 특정 key와 그 값을 plist에서 제거합니다.
+	def remove_key(key_element)
+		return unless key_element
+	
+		dict_element = key_element.parent          # 부모 <dict> 요소 가져옴
+		next_element = key_element.next_element    # 해당 key의 값 요소 (<string>, <array> 등)
+	
+		dict_element.delete(key_element)           # key 요소 삭제
+		dict_element.delete(next_element) if next_element # 값 요소도 함께 삭제
+	end
+	
+	# Helper 메소드: 배열 값을 교체 (기존 배열을 새 배열로 대체)
+	def replace_array_values(array_element, new_values)
+		# 모든 기존 자식 요소 삭제
+		array_element.elements.each { |child| array_element.delete(child) }
+	
+		# 새 값 추가
+		new_values.each do |val|
+		array_element.add_element('string').text = val
+		end
+	end
+  
+	# Helper 메소드: 기존 값을 새로운 타입으로 교체 (key는 유지)
+	def replace_value(key_element, value)
+		dict_element = key_element.parent          # 부모 <dict> 요소 가져옴
+		next_element = key_element.next_element    # 기존 <string> 또는 <array> 요소 가져오기
+	
+		dict_element.delete(next_element) if next_element # 기존 값을 삭제
+	
+		if value.is_a?(Array)
+		# 새 값이 배열인 경우 <array> 생성
+		array_element = REXML::Element.new('array') # 새 <array> 요소 생성
+		value.each { |val| array_element.add_element('string').text = val }
+		dict_element.insert_after(key_element, array_element) # <key> 뒤에 추가
+		else
+		# 새 값이 문자열인 경우 <string> 생성
+		string_element = REXML::Element.new('string') # 새 <string> 요소 생성
+		string_element.text = value
+		dict_element.insert_after(key_element, string_element) # <key> 뒤에 추가
+		end
+	end
+
+	# Helper 메소드: 새로운 key와 값을 plist에 추가합니다.
+	def add_new_key(key, value)
+		dict_element = REXML::XPath.first(@doc, '//dict')   # 최상위 <dict> 요소 찾기
+		return unless dict_element                         # <dict> 요소가 없으면 종료
+
+		key_element = REXML::Element.new('key')            # 새로운 <key> 요소 생성
+		key_element.text = key                             # <key>에 텍스트 설정
+		dict_element.add_element(key_element)              # <dict>에 <key> 추가
+
+		if value.is_a?(Array)
+			array_element = REXML::Element.new('array')      # 배열 값일 경우 <array> 생성
+			value.each { |val| array_element.add_element('string').text = val }   # 각 배열 항목 추가
+			dict_element.add_element(array_element)          # <dict>에 <array> 추가
+		else
+			string_element = REXML::Element.new('string')    # 문자열 값일 경우 <string> 생성
+			string_element.text = value                      #
+			dict_element.add_element(string_element)         # <dict>에 <string> 추가
+		end
+	end
+end
+
+#--------------------------------------------------------------------------------------------
 # main
 #--------------------------------------------------------------------------------------------
 if __FILE__ == $0
@@ -799,6 +1063,10 @@ if __FILE__ == $0
 		if ARGV[i].include?( "-camera=" ) then
 			$CameraDesc = ARGV[i].dup.to_s.sub!( "-camera=", "" )
 			puts "[Camera Description]  = " + $CameraDesc
+		end
+		if ARGV[i].include?( "-version=" ) then
+			$version = ARGV[i].dup.to_s.sub!( "-version=", "" )
+			puts "[Version]  = " + $version
 		end
 		if ARGV[i].include?( "-entitlements=" ) then
 			$Entitlements = ARGV[i].dup.to_s.sub!( "-entitlements=", "" )
@@ -860,98 +1128,33 @@ if __FILE__ == $0
 	system( '/usr/libexec/PlistBuddy -x -c \'Print \' "' + app + '/Info.plist" > "' + folder + 'Info.plist"' )
 	system( 'cp "' + folder + 'Info.plist" "' + app + '/Info.plist"' )
 
+	
 	# URL scheme 변경
-	if $URL_Scheme != nil then
-		puts "\n --> Changing URL Scheme to : " + $URL_Scheme
-		info_plist = ""
-		begin
-			file = File.open( app + "/Info.plist" )
-			urltype = false
-			urlscheme = false
-			changed = false
-			file.each_line do |line|
-				sline = line.strip
-				if !changed and sline.start_with?( "<key>CFBundleURLTypes</key>" )
-					urltype = true
-				end
-				if !changed and urltype and sline.start_with?( "<key>CFBundleURLSchemes</key>" )
-					urltype = false
-					urlscheme = true
-				end
-				if !changed and urlscheme and sline.start_with?( "<string>" )
-					urlscheme = false
-					changed = true
-					info_plist += ( "\t\t\t\t<string>" + $URL_Scheme + "</string>\r\n" )
-					next
-				end
-				info_plist += line				
-			end
-			file.close
-			file = File.open( app + "/Info.plist", "w+b" )
-			file.write info_plist
-		rescue => e
-			puts ".\n.\nProblem has occurred while changing URL scheme, please change it manually.\n.\n.\n"
-			exit( false )
-		ensure
-			file.close unless file.nil?	
-		end
+	if $URL_Scheme
+		puts "\n --> Changing URL Scheme to : #{$URL_Scheme}"
+		info_plist_manager = PlistManager.new( app + "/Info.plist" )
+		info_plist_manager.update_url_scheme( $URL_Scheme )
+		info_plist_manager.save_file
 	end
 
+	if $version
+		puts "\n --> Changing version to : #{$version}"
+		info_plist_manager = PlistManager.new( app + "/Info.plist" )
+		info_plist_manager.update_key( 'CFBundleShortVersionString', $version )
+		info_plist_manager.save_file
+	end	
 
+	
 	# ........................................................................................
 	# [Step 2] Unreal 앱 AppStore Connect 업로드 오류 해결을 위해 프로퍼티 추가
 
 	# Camera description 변경
-	if $CameraDesc != nil then
-		puts "\n --> Changing NSCameraUsageDescription to : " + $CameraDesc
-		info_plist = ""
-		begin
-			file = File.open( app + "/Info.plist" )
-			camera_desc = false
-			changed = false
-			file.each_line do |line|
-				sline = line.strip
-				if !changed and sline.start_with?( "<key>NSCameraUsageDescription</key>" )
-					camera_desc = true
-				end
-				if !changed and camera_desc and sline.start_with?( "<string>" )
-					camera_desc = false
-					changed = true
-					info_plist += ( "\t\t<string>" + $CameraDesc + "</string>\r\n" )
-					next
-				end
-				info_plist += line
-			end
-			file.close
-
-			if !changed		#not found, add one
-				info_plist = ""
-				file = File.open( app + "/Info.plist" )
-				changed = false
-				file.each_line do |line|
-					sline = line.strip
-					if !changed and sline.start_with?( "<dict>" )
-						changed = true
-						info_plist += line	
-						info_plist += ( "\t<key>NSCameraUsageDescription</key>\r\n" )
-						info_plist += ( "\t<string>" + $CameraDesc + "</string>\r\n" )
-						puts " * NSCameraUsageDescription element has added into Info.plist"
-						next
-					end
-					info_plist += line	
-				end
-				file.close
-			end
-
-			file = File.open( app + "/Info.plist", "w+b" )
-			file.write info_plist
-		rescue => e
-			puts ".\n.\nProblem has occurred while changing NSCameraUsageDescription, please change it manually.\n.\n.\n"
-			exit( false )
-		ensure
-			file.close unless file.nil?	
-		end
-	end
+	if $CameraDesc
+		puts "\n --> Changing NSCameraUsageDescription to : #{$CameraDesc}"
+		info_plist_manager = PlistManager.new( app + "/Info.plist" )
+		info_plist_manager.update_key( 'NSCameraUsageDescription', $CameraDesc )
+		info_plist_manager.save_file
+	end	
 
 	
 	#........................................................................................
@@ -965,198 +1168,47 @@ if __FILE__ == $0
 	# [Step 3] 앱 서명에 사용된 인증서 정보를 읽어 genesis에 추가
 
 	sign_app_payload( app, folder, true )
-
-	current_mode = 'none'
-	capability_used =
-	{
-		'icloud-dev-id' => false,
-		'icloud-env' => false,
-		'icloud-cont-id' => false
-	}
-	cert_info =
-	{
-		'subject0' => "",
-		'issuer0' => "",
-		'serial0' => "",
-		'pubkey0' => "",
-		'valid_from0' => "",
-		'valid_to0' => "",
-		'app_id0' => "",
-		'team_id0' => "",
-
-		'subject1' => "",
-		'issuer1' => "",
-		'serial1' => "",
-		'pubkey1' => "",
-		'valid_from1' => "",
-		'valid_to1' => "",
-		'app_id1' => "",
-		'team_id1' => "",
-		
-		'subject2' => "",
-		'issuer2' => "",
-		'serial2' => "",
-		'pubkey2' => "",
-		'valid_from2' => "",
-		'valid_to2' => "",
-		'app_id2' => "",
-		'team_id2' => "",
-
-		'domains' => "",
-		'keychain' => "",
-		'domains-xamarin' => "",
-		'keychain-xamarin' => "",
-		'icloud-dev-id' => "",
-		'icloud-dev-id-xamarin' => "",
-		'icloud-env' => "",
-		'icloud-env-xamarin' => "",
-		'icloud-cont-id' => "",
-		'icloud-cont-id-xamarin' => "",
-		'icloud-svc' => "",
-		'icloud-svc-xamarin' => ""
-	}
-
-	modified_entitlement = ""
-	previous_line = ""
-	tobe_removed_string = ""
-
-	file = File.open( folder + "entitlements.plist" )
-	file.each_line do |line|
-		modified_entitlement += ( line.strip )
-		if line.strip.start_with?( '<array>' ) and previous_line == '<key>com.apple.developer.icloud-container-development-container-identifiers</key>' then
-			current_mode = 'icloud_development_container'
-			tobe_removed_string += line.strip
-			next
-		end
-		if line.strip.start_with?( '</array>' ) and current_mode == 'icloud_development_container'
-			tobe_removed_string += line.strip
-			current_mode = 'none'
-			next
-		end
-		if line.strip.start_with?( '<string>' ) and current_mode == 'icloud_development_container'
-			tobe_removed_string += line.strip
-			next
-		end
-		if line.strip.start_with?( '<key>application-identifier</key>' ) then
-			current_mode = 'app_id0'
-			next
-		end
-		if line.strip.start_with?( '<key>com.apple.developer.team-identifier</key>' ) then
-			current_mode = 'team_id0'
-			next
-		end
-		if line.strip.start_with?( '<key>com.apple.developer.associated-domains</key>' ) then
-			current_mode = 'domains'
-			next
-		end
-		if line.strip.start_with?( '<key>keychain-access-groups</key>' ) then
-			current_mode = 'keychain'
-			cert_info['keychain-full'] = line.strip
-			next
-		end
-		if line.strip.start_with?( '<key>com.apple.developer.icloud-container-development-container-identifiers</key>' ) then
-			current_mode = 'icloud-dev-id'
-			capability_used['icloud-dev-id'] = true
-			tobe_removed_string += line.strip
-			previous_line = line.strip
-			next
-		end
-		if line.strip.start_with?( '<key>com.apple.developer.icloud-container-identifiers</key>' ) then
-			current_mode = 'icloud-cont-id'
-			capability_used['icloud-cont-id'] = true
-			next
-		end
-		if line.strip.start_with?( '<key>com.apple.developer.icloud-container-environment</key>' ) then
-			current_mode = 'icloud-env'
-			capability_used['icloud-env'] = true
-			previous_line = line.strip
-			next
-		end
-		if line.strip.start_with?( '<key>com.apple.developer.icloud-services</key>' ) then
-			current_mode = 'icloud-svc'
-			capability_used['icloud-svc'] = true
-			next
-		end
-		if line.strip.start_with?( '<key>com.apple.developer.ubiquity-kvstore-identifier</key>' ) then
-			current_mode = 'ubkvs_id'
-			next
-		end
-		if line.strip.start_with?( '<key>com.apple.developer.ubiquity-container-identifiers</key>' ) then
-			current_mode = 'ubcont_id'
-			next
-		end
-		if line.strip.start_with?( '<key>com.apple.developer.pass-type-identifiers</key>' ) then
-			current_mode = 'passtype_id'
-			next
-		end
-
-		if current_mode == 'keychain' and ( line.strip.start_with?( '<array>' ) or line.strip.start_with?( '</array>' )) then
-			cert_info['keychain'] = cert_info['keychain'].to_s + line.strip
-		end
-		if current_mode != 'none' and line.strip.start_with?( '<array/>' ) then
-			if current_mode == 'keychain' then
-				cert_info['keychain'] = cert_info['keychain'].to_s + line.strip
-			end
-			cert_info[current_mode] = ''
-			current_mode = 'none'
-		end
-		if current_mode != 'none' and line.strip.start_with?( '<string>' ) then
-			if current_mode == 'keychain' then
-				cert_info['keychain'] = cert_info['keychain'].to_s + line.strip
-			else
-				cert_info[current_mode] = line.strip.gsub( '<string>', '' ).gsub( '</string>', '' )
-				current_mode = 'none'
-			end
-		end
+	
+	if !File.exist?( folder + "entitlements.plist" )
+		puts "error: Cannon extract entitlements.plist from IPA, try rebuild app..."
+		exit( 0 )
 	end
-	file.close unless file.nil?
+
+
+	plist_manager = PlistManager.new( folder + "entitlements.plist" )
+	# plist_manager.print
+	entitlements =
+	{
+		'app_id0' => plist_manager.read( 'application-identifier' ),
+		'team_id0' => plist_manager.read( 'com.apple.developer.team-identifier' ),
+		'domains' => plist_manager.read( 'com.apple.developer.associated-domains' ),
+		'keychain' => plist_manager.read( 'keychain-access-groups' ),
+		'icloud-dev-id' => plist_manager.read( 'com.apple.developer.icloud-container-development-container-identifiers' ),
+		'icloud-env' => plist_manager.read( 'com.apple.developer.icloud-container-environment' ),
+		'icloud-cont-id' => plist_manager.read( 'com.apple.developer.icloud-container-identifiers' ),
+		'icloud-svc' => plist_manager.read( 'com.apple.developer.icloud-services' ),
+		'ubkvs_id' => plist_manager.read( 'com.apple.developer.ubiquity-kvstore-identifier' ),
+		'ubcont_id' => plist_manager.read( 'com.apple.developer.ubiquity-container-identifiers' ),
+		'passtype_id' => plist_manager.read( 'com.apple.developer.pass-type-identifiers' )
+	}
+	xamarin_entitlements = {}
+	# puts JSON.pretty_generate( entitlements )
 
 	if $isXamarin
-		current_mode = 'none'
-		file = File.open( folder + "XamarinEntitlements.plist" )
-		file.each_line do |line|
-			if current_mode != 'none' then
-				if line.strip.start_with?( '<key>' )
-					current_mode = 'none'
-				else
-					cert_info[current_mode] = cert_info[current_mode].to_s + line.strip
-				end
-			end
-			if line.strip.start_with?( '<key>com.apple.developer.associated-domains</key>' ) then
-				current_mode = 'domains-xamarin'
-				cert_info['domains-xamarin'] = ''
-				next
-			end
-			if line.strip.start_with?( '<key>keychain-access-groups</key>' ) then
-				current_mode = 'keychain-xamarin'
-				cert_info['keychain-xamarin'] = ''
-				next
-			end
-			if line.strip.start_with?( '<key>com.apple.developer.icloud-container-identifiers</key>' ) then
-				current_mode = 'icloud-cont-id-xamarin'
-				capability_used['icloud-cont-id'] = true
-				cert_info['icloud-cont-id'] = ''
-				next
-			end
-			if line.strip.start_with?( '<key>com.apple.developer.icloud-container-environment</key>' ) then
-				current_mode = 'icloud-env-xamarin'
-				capability_used['icloud-env'] = true
-				cert_info['icloud-env'] = ''
-				next
-			end
-			if line.strip.start_with?( '<key>com.apple.developer.icloud-services</key>' ) then
-				current_mode = 'icloud-svc-xamarin'
-				capability_used['icloud-svc-xamarin'] = true
-				cert_info['icloud-svc-xamarin'] = ''
-				next
-			end
-		end
-		file.close unless file.nil?
+		xamarin_manager = PlistManager.new( folder + "XamarinEntitlements.plist" )
+		xamarin_entitlements =
+		{
+			'domains-xamarin' => xamarin_manager.read( 'com.apple.developer.associated-domains' ),
+			'keychain-xamarin' => xamarin_manager.read( 'keychain-access-groups' ),
+			'icloud-cont-id' => xamarin_manager.read( 'com.apple.developer.icloud-container-identifiers' ),
+			'icloud-env' => xamarin_manager.read( 'com.apple.developer.icloud-container-environment' ),
+			'icloud-svc-xamarin' => xamarin_manager.read( 'com.apple.developer.icloud-services' )
+		}
 	end
 
 	# app_id에 wildcard가 포함되어 있을 경우 bundle ID로 대체
-	if cert_info['app_id0'] != nil and cert_info['app_id0'].end_with?( '.*' )
-		old_app_id = cert_info['app_id0']
+	if entitlements['app_id0'] != nil and entitlements['app_id0'].end_with?( '.*' )
+		old_app_id = entitlements['app_id0']
 
 		# app의 bundle ID 추출
 		system( "osascript -e 'id of app \"" + app + "\"' > " + folder + "bundle_id" )
@@ -1175,73 +1227,24 @@ if __FILE__ == $0
 			else
 				dist_summary = $DistributionSummary
 			end
-			begin
-				current_mode = 'none'
-				domains = ""
-				file = File.open( dist_summary )
-				file.each_line do |line|
-					if line.strip.start_with?( '<key>application-identifier</key>' ) then
-						current_mode = 'app_id0'
-						next
-					end
-					if current_mode == 'app_id0' and line.strip.start_with?( '<string>' ) then
-						$bundle_id = line.strip.gsub( '<string>', '' ).gsub( '</string>', '' )
-						current_mode = 'none'
-					end
-				end
-			rescue => e
-				puts ".\n.\nProblem has occurred while opening 'DistributionSummary.plist' file in your IPA exported folder. (:642)\n[Error] " + e.to_s + "\nYou need 'DistributionSummary.plist' file when you use associated domains entitlement feature, if there is no such file in your IPA exported folder please retry to export IPA.\n.\n.\n"
-				exit( false )
-			ensure
-				file.close unless file.nil?	
+
+			if File.exist?( dist_summary )
+				dist_manager = PlistManager.new( dist_summary )
+				$bundle_id = dist_manager.read( 'application-identifier' ).gsub( entitlements['team_id0'] + '.', '' )
 			end
 		end
 
-		cert_info['app_id0'] = cert_info['team_id0'] + '.' + $bundle_id
+		entitlements['app_id0'] = entitlements['team_id0'] + '.' + $bundle_id
 
 		# wildcard가 제거된 bundle ID로 대체
-		modified_entitlement.sub!( '<string>' + old_app_id + '</string>', '<string>' + cert_info['app_id0'] + '</string>' )
-		puts "  ==> Application ID replaced : " + old_app_id + " >> " + cert_info['app_id0']
+		plist_manager.update_key( 'application-identifier', entitlements['app_id0'] )
+		puts "  ==> Application ID replaced : " + old_app_id + " >> " + entitlements['app_id0']
 	end
 
-	$bundle_id = cert_info['app_id0'].gsub( cert_info['team_id0'] + '.', '' )
-
-	# ubiquity-kvstore-identifier에 wildcard가 포함되어 있을 경우 bundle ID로 대체
-	if cert_info['ubkvs_id'] != nil and cert_info['ubkvs_id'].end_with?( '.*' )
-		old_ubkvs_id = cert_info['ubkvs_id']
-		cert_info['ubkvs_id'] = cert_info['team_id0'] + '.' + $bundle_id
-
-		# wildcard가 제거된 bundle ID로 대체
-		modified_entitlement.sub!( '<string>' + old_ubkvs_id + '</string>', '<string>' + cert_info['ubkvs_id'] + '</string>' )
-		puts "  ==> ubiquity-kvstore-identifier replaced : " + old_ubkvs_id + " >> " + cert_info['ubkvs_id']
-	end
-
-	# ubiquity-container-identifier에 wildcard가 포함되어 있을 경우 bundle ID로 대체
-	if cert_info['ubcont_id'] != nil and cert_info['ubcont_id'].end_with?( '.*' )
-		old_ubcont_id = cert_info['ubcont_id']
-		cert_info['ubcont_id'] = cert_info['team_id0'] + '.' + $bundle_id
-
-		# wildcard가 제거된 bundle ID로 대체
-		modified_entitlement.sub!( '<string>' + old_ubcont_id + '</string>', '<string>' + cert_info['ubcont_id'] + '</string>' )
-		puts "  ==> ubiquity-container-identifier replaced : " + old_ubkvs_id + " >> " + cert_info['ubcont_id']
-	end
-
-	# com.apple.developer.pass-type-identifiers 에 wildcard가 포함되어 있을 경우 bundle ID로 대체
-	if cert_info['passtype_id'] != nil and cert_info['passtype_id'].end_with?( '.*' )
-		old_passtype_id = cert_info['passtype_id']
-		cert_info['passtype_id'] = cert_info['team_id0'] + '.' + $bundle_id
-
-		# wildcard가 제거된 bundle ID로 대체
-		modified_entitlement.sub!( '<string>' + old_passtype_id + '</string>', '<string>' + cert_info['passtype_id'] + '</string>' )
-		puts "  ==> pass-type-identifiers replaced : " + old_passtype_id + " >> " + cert_info['passtype_id']
-	end
-
+	$bundle_id = entitlements['app_id0'].gsub( entitlements['team_id0'] + '.', '' )
 
 	#........................................................................................
 	# [Step 4] license 에서 account ID 추출
-
-	$sdk_version = "1.0.0.0"
-	$iv = SecureRandom.hex( 16 )		# iv 값은 랜덤으로 생성하여 사용하고 genesis에 저장한다
 
 	if File.exist?( app.to_s + "/appsealing.lic" ) then
 		get_accountID_hash_from_license_file( app.to_s + "/appsealing.lic" )
@@ -1250,17 +1253,29 @@ if __FILE__ == $0
 	end
 
 
-	#........................................................................................
-	# [Step 5] entitlements.plist 처리
+	# ubiquity-kvstore-identifier에 wildcard가 포함되어 있을 경우 bundle ID로 대체
+	if entitlements['ubkvs_id'] != nil and entitlements['ubkvs_id'].end_with?( '.*' )
+		plist_manager.update_key( 'com.apple.developer.ubiquity-kvstore-identifier', entitlements['team_id0'] + '.' + $bundle_id )
+	end
+
+	# ubiquity-container-identifier에 wildcard가 포함되어 있을 경우 bundle ID로 대체
+	if entitlements['ubcont_id'] != nil
+		plist_manager.update_or_remove_array_value( 'com.apple.developer.ubiquity-container-identifiers', '.*', entitlements['team_id0'] + '.' + $bundle_id )
+	end
+
+	# com.apple.developer.pass-type-identifiers 에 wildcard가 포함되어 있을 경우 bundle ID로 대체
+	if entitlements['passtype_id'] != nil
+		plist_manager.update_or_remove_array_value( 'com.apple.developer.pass-type-identifiers', '.*', entitlements['team_id0'] + '.' + $bundle_id )
+	end
 
 	# associated domains 태그의 값이 *인 경우 DistributionSummary.plist 파일에서 해당 값을 가져와 대채
-	if cert_info['domains'] != nil and cert_info['domains'].to_s == '*'
+	if entitlements['domains'] != nil and entitlements['domains'].to_s == '*'
 
 		if $isUnreal then
-			cert_info['domains'] = '<string>' + cert_info['app_id0'] + '</string>'
+			entitlements['domains'] = entitlements['app_id0']
 
 		elsif $isXamarin
-			cert_info['domains'] = cert_info['domains-xamarin']
+			entitlements['domains'] = xamarin_entitlements['domains-xamarin']
 		
 		else
 			# DistributionSummary.plist 파일 열기
@@ -1270,50 +1285,29 @@ if __FILE__ == $0
 			else
 				dist_summary = $DistributionSummary
 			end
-			begin
-				current_mode = 'none'
-				domains = ""
-				file = File.open( dist_summary )
-				file.each_line do |line|
-					if line.strip.start_with?( '<key>com.apple.developer.associated-domains</key>' ) then
-						current_mode = 'domains'
-						next
-					end
-					if current_mode == 'domains' then
-						domains += line
-					end
-					if current_mode == 'domains' and (line.strip.start_with?( '</array>' ) or line.strip.start_with?( '<array/>' )) then
-						current_mode = 'none'
-						break
-					end
-				end
-				cert_info['domains'] = domains.strip
-			rescue => e
-				puts ".\n.\nProblem has occurred while opening 'DistributionSummary.plist' file in your IPA exported folder. (:642)\n[Error] " + e.to_s + "\nYou need 'DistributionSummary.plist' file when you use associated domains entitlement feature, if there is no such file in your IPA exported folder please retry to export IPA.\n.\n.\n"
-				exit( false )
-			ensure
-				file.close unless file.nil?	
+			if File.exist?( dist_summary )
+				dist_manager = PlistManager.new( dist_summary )
+				entitlements['domains'] = dist_manager.read( 'com.apple.developer.associated-domains' )
 			end
 		end
 
 		# wildcard가 제거된 associated domains로 대체
-		if cert_info['domains'] == '' or cert_info['domains'].to_s == '*' then	# empty in DistSummary
-			modified_entitlement.sub!( '<key>com.apple.developer.associated-domains</key>', '' )
-			modified_entitlement.sub!( '<string>*</string>', '' )
+		if entitlements['domains'].to_s == '' or entitlements['domains'].to_s == '[]' or entitlements['domains'].to_s == '*' then	# empty in DistSummary
+			plist_manager.update_key( 'com.apple.developer.associated-domains', nil )
 		else
-			modified_entitlement.sub!( '<key>com.apple.developer.associated-domains</key><string>*</string>', '<key>com.apple.developer.associated-domains</key>' + cert_info['domains'] )
-			puts "  ==> Associated domains repaired : * >> " + cert_info['domains']
+			plist_manager.update_key( 'com.apple.developer.associated-domains', entitlements['domains'] )
+			puts "  ==> Associated domains repaired : * >> " + entitlements['domains'].to_s
 		end
 	end
 
 	# keychain-access-groups 태그의 값이 *인 경우 DistributionSummary.plist 파일에서 해당 값을 가져와 대채
-	if cert_info['keychain'] != nil and cert_info['keychain'].include?( '.*' )
-
+	if entitlements['keychain'] != nil and plist_manager.array_contains?( 'keychain-access-groups', '.*' ) >= 0
+		index = plist_manager.array_contains?( 'keychain-access-groups', '.*' )
 		if $isUnreal or $isXamarin then
-			cert_info['keychain'] = cert_info['app_id0']
+			plist_manager.update_array_value( 'keychain-access-groups', index, entitlements['app_id0'] )
 
 		elsif $isXamarin
-			cert_info['keychain'] = cert_info['keychain-xamarin']
+			plist_manager.update_array_value( 'keychain-access-groups', index, xamarin_entitlements['keychain-xamarin'] )
 		
 		else
 			# DistributionSummary.plist 파일 열기
@@ -1323,52 +1317,39 @@ if __FILE__ == $0
 			else
 				dist_summary = $DistributionSummary
 			end
-			keychain = ""
-			begin
-				current_mode = 'none'
-				file = File.open( dist_summary )
-				file.each_line do |line|
-					if line.strip.start_with?( '<key>keychain-access-groups</key>' ) then
-						current_mode = 'keychain'
-						next
-					end
-					if current_mode == 'keychain' then
-						keychain += line
-					end
-					if current_mode == 'keychain' and (line.strip.start_with?( '</array>' ) or line.strip.start_with?( '<array/>' )) then
-						current_mode = 'none'
-						break
-					end
-				end
-			rescue => e
-				puts ".\n.\nProblem has occurred while opening 'DistributionSummary.plist' file in your IPA exported folder.\n[Error] " + e.to_s + "\nYou need 'DistributionSummary.plist' file when you use associated domains entitlement feature, if there is no such file in your IPA exported folder please retry to export IPA.\n.\n.\n"
-				exit( false )
-			ensure
-				file.close unless file.nil?	
+
+			if File.exist?( dist_summary )
+				dist_manager = PlistManager.new( dist_summary )
+				keychain = dist_manager.read( 'keychain-access-groups' )
 			end
 
 			# wildcard가 제거된 keychain-access-groups로 대체
-			if keychain != '' then
-				modified_entitlement.sub!( cert_info['keychain'], keychain.strip.gsub( /\s+/, '' ) )
-				puts "  ==> Keychain access groups repaired : \n" + keychain
+			if keychain != nil and keychain.to_s != '[]' then
+				plist_manager.update_key( 'keychain-access-groups', keychain )
+				# modified_entitlement.sub!( cert_info['keychain'], keychain.strip.gsub( /\s+/, '' ) )
+				puts "  ==> Keychain access groups repaired : \n" + plist_manager.read( 'keychain-access-groups' ).to_s
+			else
+				# only repair *
+				plist_manager.update_or_remove_array_value( 'keychain-access-groups', '.*', entitlements['team_id0'] + '.' + $bundle_id )
+				puts "  ==> Keychain access groups repaired : \n" + plist_manager.read( 'keychain-access-groups' ).to_s
 			end
 		end
 	end	
 
 	# icloud-services 태그의 값이 *인 경우 DistributionSummary.plist 파일에서 해당 값을 가져와 대채
-	if cert_info['icloud-svc'] != nil and cert_info['icloud-svc'].to_s == '*'
+	if entitlements['icloud-svc'] != nil and entitlements['icloud-svc'].to_s == '*'
 
 		if $isUnreal then
 			if $CloudServices != nil and $CloudServices != '' then
 				if !$CloudServices.include?( ',' ) then
 					if $CloudServices == 'none'
-						cert_info['icloud-svc'] = ''
+						entitlements['icloud-svc'] = ''
 					else
-						cert_info['icloud-svc'] = '<array><string>' + $CloudServices + '</string></array>'
+						entitlements['icloud-svc'] = '<array><string>' + $CloudServices + '</string></array>'
 					end
 				else
 					svcs = $CloudServices.split( ',' )
-					cert_info['icloud-svc'] = '<array><string>' + svcs[0].strip + '</string><string>' + svcs[1].strip + '</string></array>'
+					entitlements['icloud-svc'] = '<array><string>' + svcs[0].strip + '</string><string>' + svcs[1].strip + '</string></array>'
 				end
 			else	# 콘솔에서 직접 입력
 				puts "\n ------------------------------------------------------------------------------------------------------"
@@ -1396,18 +1377,18 @@ if __FILE__ == $0
 				puts input
 				puts "\n"
 				if input == '0' then
-					cert_info['icloud-svc'] = ''
+					entitlements['icloud-svc'] = ''
 				elsif input == '1' then
-					cert_info['icloud-svc'] = '<array><string>CloudKit</string></array>'
+					entitlements['icloud-svc'] = ['CloudKit']
 				elsif input == '2' then
-					cert_info['icloud-svc'] = '<array><string>CloudDocuments</string></array>'
+					entitlements['icloud-svc'] = ['CloudDocuments']
 				else
-					cert_info['icloud-svc'] = '<array><string>CloudKit</string><string>CloudDocuments</string></array>'
+					entitlements['icloud-svc'] = ['CloudKit', 'CloudDocuments']
 				end
 			end
 
 		elsif $isXamarin
-			cert_info['icloud-svc'] = cert_info['icloud-svc-xamarin']
+			entitlements['icloud-svc'] = xamarin_entitlements['icloud-svc-xamarin']
 
 		else
 			# DistributionSummary.plist 파일 열기
@@ -1417,63 +1398,52 @@ if __FILE__ == $0
 			else
 				dist_summary = $DistributionSummary
 			end
-			begin
-				current_mode = 'none'
-				icloud = ""
-				file = File.open( dist_summary )
-				file.each_line do |line|
-					if line.strip.start_with?( '<key>com.apple.developer.icloud-services</key>' ) then
-						current_mode = 'icloud'
-						next
-					end
-					if current_mode == 'icloud' then
-						icloud += line
-						if line.strip.start_with?( '<string>*</string' ) then
-							current_mode = 'none'
-						end
-					end
-					if current_mode == 'icloud' and ( line.strip.start_with?( '</array>' ) or line.strip.start_with?( '<array/>' ) or line.strip.start_with?( '<key>' )) then
-						current_mode = 'none'
-						break
-					end
-				end
-				cert_info['icloud-svc'] = icloud.strip
-			rescue => e
-				puts ".\n.\nProblem has occurred while opening 'DistributionSummary.plist' file in your IPA exported folder.\n[Error] " + e.to_s + "\nYou need 'DistributionSummary.plist' file when you use associated domains entitlement feature, if there is no such file in your IPA exported folder please retry to export IPA.\n.\n.\n"
-				exit( false )
-			ensure
-				file.close unless file.nil?	
+			if File.exist?( dist_summary )
+				dist_manager = PlistManager.new( dist_summary )
+				entitlements['icloud-svc'] = dist_manager.read( 'com.apple.developer.icloud-services' )
 			end
 		end
 
 		# wildcard가 제거된 icloud-services 대체
-		modified_entitlement.sub!( '<key>com.apple.developer.icloud-services</key><string>*</string>', '<key>com.apple.developer.icloud-services</key>' + cert_info['icloud-svc'] )
-
-		if cert_info['icloud-svc'] == '' or cert_info['icloud-svc'] == '*' then
-			modified_entitlement.sub!( '<key>com.apple.developer.icloud-services</key>', '' )
+		if entitlements['icloud-svc'] == '' or entitlements['icloud-svc'] == '*' then
+			# modified_entitlement.sub!( '<key>com.apple.developer.icloud-services</key>', '' )
+			plist_manager.update_key( 'com.apple.developer.icloud-services', nil )
 		else
-			puts "  ==> iCloud-services repaired : * >> " + cert_info['icloud-svc']
+			puts "  ==> iCloud-services repaired : * >> " + entitlements['icloud-svc'].to_s
+			plist_manager.update_key( 'com.apple.developer.icloud-services', entitlements['icloud-svc'] )
 		end
 	end
 
-	if capability_used['icloud-dev-id'] != nil and cert_info['icloud-dev-id'].strip == '' and capability_used['icloud-cont-id'] and cert_info['icloud-cont-id'].strip == '' then
-		modified_entitlement.sub!( '<key>com.apple.developer.icloud-container-development-container-identifiers</key><array/>', '' )
-		modified_entitlement.sub!( '<key>com.apple.developer.icloud-container-identifiers</key><array/>', '' )
-		modified_entitlement.sub!( '<key>com.apple.developer.icloud-services</key><string>*</string>', '' )
+	plist_manager.update_key( 'com.apple.developer.icloud-container-development-container-identifiers', nil )
+	if entitlements['icloud-dev-id'] != nil and ( entitlements['icloud-dev-id'].to_s == '' || entitlements['icloud-dev-id'].to_s == '[]' ) and entitlements['icloud-cont-id'] != nil and ( entitlements['icloud-cont-id'].to_s == '' || entitlements['icloud-cont-id'].to_s == '[]' ) then
+		plist_manager.update_key( 'com.apple.developer.icloud-container-identifiers', nil )
+		plist_manager.update_key( 'com.apple.developer.icloud-services', nil )
 	end
 
-	if capability_used['icloud-dev-id'] != nil and tobe_removed_string != '' then
-		modified_entitlement.sub!( tobe_removed_string, '' )
-	end
-
-	if capability_used['icloud-svc'] then
-		if cert_info['icloud-env'] == '' then
-			modified_entitlement.sub!( '<key>com.apple.developer.icloud-services</key>', '<key>com.apple.developer.icloud-container-environment</key><string>Production</string><key>com.apple.developer.icloud-services</key>' )
+	if entitlements['icloud-svc'] then
+		if entitlements['icloud-env'].to_s == '[]' then
+			plist_manager.update_key( 'com.apple.developer.icloud-container-environment', 'com.apple.developer.icloud-services' )
 		end
-		modified_entitlement.sub!( '<string>Development</string>', '' )
+		if plist_manager.array_contains?( 'com.apple.developer.icloud-container-environment', 'Development' ) >= 0
+			plist_manager.update_array_value( 'com.apple.developer.icloud-container-environment', plist_manager.array_contains?( 'com.apple.developer.icloud-container-environment', 'Development' ), nil )
+		end
 	end
-	if modified_entitlement.include?( '<key>com.apple.developer.nfc.readersession.formats</key>' )
-		modified_entitlement.sub!( '<string>NDEF</string>', '' )	# Asset validation failed (90778) - Invalid entitlement for core nfc framework.
+	if plist_manager.read( 'com.apple.developer.nfc.readersession.formats' ) != nil
+		plist_manager.update_or_remove_array_value( 'com.apple.developer.nfc.readersession.formats', 'NDEF', nil )
+	end
+
+	if plist_manager.read( 'com.apple.developer.push-to-talk' ) == ''
+		plist_manager.update_or_remove_array_value( 'UIBackgroundModes', 'push-to-talk', nil )
+	end
+	
+	plist_manager.update_key( 'com.apple.developer.spatial-audio.profile-access', nil )
+	plist_manager.update_key( 'com.apple.developer.media-device-discovery-extension', nil )
+	plist_manager.update_key( 'com.apple.developer.on-demand-install-capable', nil )
+	plist_manager.update_key( 'com.apple.developer.kernel.increased-debugging-memory-limit', nil )
+	plist_manager.update_key( 'com.apple.developer.shared-with-you', nil )
+
+	if plist_manager.read( 'com.apple.developer.callkit' ) == nil 
+		plist_manager.update_key( 'com.apple.developer.calling-app', nil )
 	end
 
 	if $isXamarin
@@ -1481,81 +1451,42 @@ if __FILE__ == $0
 		#
 		# -> Payload에 포함된 실제 Entitlements.plist의 HealthKit 항목과 embeded.mobileprovision 에서 추출한 Entitlements-HealthKit 항목이 다를 수 있음
 		# -> embeded.mobileprovision 추출 HealthKit 항목이 Payload의 Entitlements.plist에 존재하지 않을 경우 해당 항목을 삭제한 entitlements.plist를 코드 서명에 사용해야 한다
-		# 
-		xamarin_entitlements = ""
-		file = File.open( folder + "XamarinEntitlements.plist" )
-		file.each_line do |line|
-			xamarin_entitlements += ( line.strip )
+		#
+		if xamarin_manager.read( 'com.apple.developer.healthkit' ) != nil
+			plist_manager.update_key( 'com.apple.developer.healthkit', nil )
 		end
-		file.close unless file.nil?
-		
-		if !xamarin_entitlements.include?( '<key>com.apple.developer.healthkit</key>' )
-			modified_entitlement.sub!( '<key>com.apple.developer.healthkit</key><true/>', '' )
+		if xamarin_manager.read( 'com.apple.developer.healthkit.access' ) != nil
+			plist_manager.update_key( 'com.apple.developer.healthkit.access', nil )
 		end
-		if !xamarin_entitlements.include?( '<key>com.apple.developer.healthkit.access</key>' )
-			modified_entitlement.sub!( '<key>com.apple.developer.healthkit.access</key><array><string>health-records</string></array>', '' )
+		if xamarin_manager.read( 'com.apple.developer.healthkit.background-delivery' ) != nil
+			plist_manager.update_key( 'com.apple.developer.healthkit.background-delivery', nil )
 		end
-		if !xamarin_entitlements.include?( '<key>com.apple.developer.healthkit.background-delivery</key>' )
-			modified_entitlement.sub!( '<key>com.apple.developer.healthkit.background-delivery</key><true/>', '' )
+		if xamarin_manager.read( 'com.apple.developer.healthkit.recalibrate-estimates' ) != nil
+			plist_manager.update_key( 'com.apple.developer.healthkit.recalibrate-estimates', nil )
 		end
-		if !xamarin_entitlements.include?( '<key>com.apple.developer.healthkit.recalibrate-estimates</key>' )
-			modified_entitlement.sub!( '<key>com.apple.developer.healthkit.recalibrate-estimates</key><true/>', '' )
+		if xamarin_manager.read( 'com.apple.developer.homekit' ) != nil
+			plist_manager.update_key( 'com.apple.developer.homekit', nil )
 		end
-		if !xamarin_entitlements.include?( '<key>com.apple.developer.homekit</key>' )
-			modified_entitlement.sub!( '<key>com.apple.developer.homekit</key><true/>', '' )
+		if xamarin_manager.read( 'com.apple.developer.healthkit' ) != nil
+			plist_manager.update_key( 'com.apple.developer.healthkit', nil )
 		end
-		if !xamarin_entitlements.include?( '<key>com.apple.developer.usernotifications.communication</key>' )
-			modified_entitlement.sub!( '<key>com.apple.developer.usernotifications.communication</key><true/>', '' )
+		if xamarin_manager.read( 'com.apple.developer.healthkit' ) != nil
+			plist_manager.update_key( 'com.apple.developer.healthkit', nil )
 		end
-		if !xamarin_entitlements.include?( '<key>com.apple.developer.usernotifications.time-sensitive</key>>' )
-			modified_entitlement.sub!( '<key>com.apple.developer.usernotifications.time-sensitive</key><true/>', '' )
+		if xamarin_manager.read( 'com.apple.developer.usernotifications.communication' ) != nil
+			plist_manager.update_key( 'com.apple.developer.usernotifications.communication', nil )
+		end
+		if xamarin_manager.read( 'com.apple.developer.usernotifications.time-sensitive' ) != nil
+			plist_manager.update_key( 'com.apple.developer.usernotifications.time-sensitive', nil )
 		end
 		
 		# Info.plist에 NSHealthUpdateUsageDescription 항목이 없으면 업로드 에러가 발생하므로 Payload Info.plist에 NSHealthUpdateUsageDescription 값이 없을 경우 새로 추가한다
-		current_mode = 'none'
-		has_desc = false
-		file = File.open( app + "/Info.plist" )
-		file.each_line do |line|
-			if line.strip.start_with?( '<key>NSHealthUpdateUsageDescription</key>' ) then
-				has_desc = true
-				break
-			end
-		end
-		file.close unless file.nil?
-
-		if !has_desc
-			info_plist = ""
-			file = File.open( app + "/Info.plist" )
-			changed = false
-			file.each_line do |line|
-				sline = line.strip
-				if !changed and sline.start_with?( "<dict>" )
-					changed = true
-					info_plist += line	
-					info_plist += ( "\t<key>NSHealthUpdateUsageDescription</key>\r\n" )
-					info_plist += ( "\t<string>This description is created by AppSealing SDK</string>\r\n" )
-					puts " * NSHealthUpdateUsageDescription element has added into Info.plist"
-					next
-				end
-				info_plist += line	
-			end
-			file.close
-			file = File.open( app + "/Info.plist", "w+b" )
-			file.write info_plist	
-			file.close
+		if plist_manager.read( 'NSHealthUpdateUsageDescription' ) == nil
+			plist_manager.update_key( 'NSHealthUpdateUsageDescription', 'This description is created by AppSealing SDK' )
 		end
 	end
 
-	# 최종 변경된 entitlements를 파일에 기록
-	begin
-		entitlement = File.open( folder + "entitlements.plist", "w+" )
-		entitlement.write modified_entitlement
-	rescue => e
-		puts ".\n.\nProblem has occurred while modifying entitlement.plist, please try again.\n[Error] " + e.to_s + "\nIf this error occurs continuously, contact AppSealing Help Center.\n.\n.\n"
-		exit( false )
-	ensure
-		entitlement.close unless entitlement.nil?
-	end
+	plist_manager.save_file
 
 	#........................................................................................
 	# [Step 6] hermes bytecode(main.jsbuncle) 파일이 있을 경우 서버를 통해 암호화 진행
@@ -1564,7 +1495,7 @@ if __FILE__ == $0
 		encrypt_javascript_bytecode( app )
 	end
 
-	
+
 	#........................................................................................
 	# [Step 7] 변경된 파일이 있을 수 있으므로 app을 1차 재서명
 
@@ -1576,8 +1507,37 @@ if __FILE__ == $0
 	#........................................................................................
 	# [Step 8] 인증서 정보 추출
 
-
 	certificate = ""
+
+	cert_info =
+	{
+		'subject0' => "",
+		'issuer0' => "",
+		'serial0' => "",
+		'pubkey0' => "",
+		'valid_from0' => "",
+		'valid_to0' => "",
+		'app_id0' => "",
+		'team_id0' => "",
+
+		'subject1' => "",
+		'issuer1' => "",
+		'serial1' => "",
+		'pubkey1' => "",
+		'valid_from1' => "",
+		'valid_to1' => "",
+		'app_id1' => "",
+		'team_id1' => "",
+		
+		'subject2' => "",
+		'issuer2' => "",
+		'serial2' => "",
+		'pubkey2' => "",
+		'valid_from2' => "",
+		'valid_to2' => "",
+		'app_id2' => "",
+		'team_id2' => ""
+	}
 
 	for i in ['0', '1', '2']
 		# 인증서를 ASN.1 형식의 public key와 대조하기 위한 PEM 포맷을 snapshot으로 저장
@@ -1656,8 +1616,8 @@ if __FILE__ == $0
 		end
 		file.close unless file.nil?
 
-		certificate += ( "##$##&AI" + i + cert_info['app_id'     + i] + "\n" )
-		certificate += ( "##$##&TI" + i + cert_info['team_id'    + i] + "\n" )
+		certificate += ( "##$##&AI" + i + entitlements['app_id0'] + "\n" )
+		certificate += ( "##$##&TI" + i + entitlements['team_id0'] + "\n" )
 		certificate += ( "##$##&SJ" + i + cert_info['subject'    + i] + "\n" )
 		certificate += ( "##$##&IS" + i + cert_info['issuer'     + i] + "\n" )
 		certificate += ( "##$##&SN" + i + cert_info['serial'     + i] + "\n" )
@@ -1702,6 +1662,7 @@ if __FILE__ == $0
 		exit( false )
 	end
 
+	$sdk_version = '1.9.2.1' #TEMP
 
 	host = $baseURL + 'v3/sdk/ios/requestGenesisForIOS'
 	uri = URI( host )
@@ -1720,7 +1681,9 @@ if __FILE__ == $0
 		response = Net::HTTP.start( uri.hostname, uri.port, use_ssl: uri.scheme == 'https' ) do |http|
 			http.request( request )
 		end
+
 		result = JSON.parse( response.body )
+
 		code = result['result']['code']
 		message = result['result']['message']
 		if code != '0000' then

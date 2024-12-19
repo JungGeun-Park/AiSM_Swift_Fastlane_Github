@@ -30,66 +30,78 @@ jobs:
           security unlock-keychain -p "temp_password" temp.keychain
           security set-keychain-settings -lut 3600 temp.keychain
 
-
       # 4. 프로비저닝 프로파일 설정
       - name: Set up Provisioning Profile from Project Folder
         run: |
           mkdir -p ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles
           cp ./AppSealing_Wildcard_Distribution_Profile.mobileprovision ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/
 
-      # 5. Generate ExportOptions.plist
-      - name: Generate ExportOptions.plist
-        run: |
-          cat <<EOF > ExportOptions.plist
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-              <key>method</key>
-              <string>app-store</string>
-              <key>teamID</key>
-              <string>22X77ENQ2H</string>
-              <key>provisioningProfiles</key>
-              <dict>
-                  <key>com.inka.swift</key>
-                  <string>AppSealing Wildcard Distribution Profile</string>
-              </dict>
-              <key>signingStyle</key>
-              <string>manual</string>
-          </dict>
-          </plist>
-          EOF
+      # # 5. Generate ExportOptions.plist
+      # - name: Generate ExportOptions.plist
+      #   run: |
+      #     cat <<EOF > ExportOptions.plist
+      #     <?xml version="1.0" encoding="UTF-8"?>
+      #     <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      #     <plist version="1.0">
+      #     <dict>
+      #         <key>method</key>
+      #         <string>app-store</string>
+      #         <key>teamID</key>
+      #         <string>22X77ENQ2H</string>
+      #         <key>provisioningProfiles</key>
+      #         <dict>
+      #             <key>com.inka.swift</key>
+      #             <string>AppSealing Wildcard Distribution Profile</string>
+      #         </dict>
+      #         <key>signingStyle</key>
+      #         <string>manual</string>
+      #     </dict>
+      #     </plist>
+      #     EOF
 
-      # 6. Archive iOS App
-      - name: Archive iOS App
-        run: |
-          xcodebuild clean archive \
-            -project AiSM_Swift_Fastlane_Github.xcodeproj \
-            -scheme AiSM_Swift_Fastlane_Github \
-            -archivePath ${{ runner.temp }}/AiSM_Swift_Fastlane_Github.xcarchive \
-            CODE_SIGN_STYLE="Manual" \
-            DEVELOPMENT_TEAM="22X77ENQ2H" \
-            OTHER_CODE_SIGN_FLAGS="--timestamp=none" \
-            CODE_SIGN_IDENTITY="Apple Distribution: Inka Entworks Inc. (22X77ENQ2H)" \
-            PROVISIONING_PROFILE_SPECIFIER="AppSealing Wildcard Distribution Profile"
+      # # 6. Archive iOS App
+      # - name: Archive iOS App
+      #   run: |
+      #     xcodebuild clean archive \
+      #       -project AiSM_Swift_Fastlane_Github.xcodeproj \
+      #       -scheme AiSM_Swift_Fastlane_Github \
+      #       -archivePath ${{ runner.temp }}/AiSM_Swift_Fastlane_Github.xcarchive \
+      #       CODE_SIGN_STYLE="Manual" \
+      #       DEVELOPMENT_TEAM="22X77ENQ2H" \
+      #       OTHER_CODE_SIGN_FLAGS="--timestamp=none" \
+      #       CODE_SIGN_IDENTITY="Apple Distribution: Inka Entworks Inc. (22X77ENQ2H)" \
+      #       PROVISIONING_PROFILE_SPECIFIER="AppSealing Wildcard Distribution Profile"
 
-      # 7. Export IPA file with ExportOptions.plist
-      - name: Export IPA file
-        run: |
-          xcodebuild -exportArchive \
-            -archivePath ${{ runner.temp }}/AiSM_Swift_Fastlane_Github.xcarchive \
-            -exportPath ${{ runner.temp }}/build \
-            -exportOptionsPlist ./ExportOptions.plist
+      # # 7. Export IPA file with ExportOptions.plist
+      # - name: Export IPA file
+      #   run: |
+      #     xcodebuild -exportArchive \
+      #       -archivePath ${{ runner.temp }}/AiSM_Swift_Fastlane_Github.xcarchive \
+      #       -exportPath ${{ runner.temp }}/build \
+      #       -exportOptionsPlist ./ExportOptions.plist
 
-      # 8. Upload IPA as Artifact
-      - name: Upload IPA to TestFlight
-        env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+      # # 8. Upload IPA as Artifact
+      # - name: Upload IPA to TestFlight
+      #   env:
+      #     APPLE_ID: ${{ secrets.APPLE_ID }}
+      #     APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+      #   run: |
+      #     xcrun altool --upload-app \
+      #       --type ios \
+      #       --file ${{ runner.temp }}/build/AiSM_Swift_Fastlane_Github.ipa \
+      #       --username "$APPLE_ID" \
+      #       --password "$APPLE_APP_PASSWORD" \
+      #       --verbose
+
+      # 3. Install Ruby and Fastlane
+      - name: Install Fastlane
         run: |
-          xcrun altool --upload-app \
-            --type ios \
-            --file ${{ runner.temp }}/build/AiSM_Swift_Fastlane_Github.ipa \
-            --username "$APPLE_ID" \
-            --password "$APPLE_APP_PASSWORD" \
-            --verbose
+          gem install bundler fastlane
+
+      # 4. Run Fastlane lane for TestFlight upload
+      - name: Run Fastlane Lane
+        # env:
+        #   APPLE_ID: "your_apple_id@example.com"
+        #   FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: "your_app_specific_password"
+        run: |
+          bundle exec fastlane beta      
