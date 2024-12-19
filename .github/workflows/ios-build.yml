@@ -44,7 +44,9 @@ jobs:
             -allowProvisioningUpdates \
             -project AiSM_Swift_Fastlane_Github.xcodeproj \
             -scheme AiSM_Swift_Fastlane_Github \
-            -archivePath ${{ runner.temp }}/AiSM_Swift_Fastlane_Github.xcarchive
+            -archivePath ${{ runner.temp }}/AiSM_Swift_Fastlane_Github.xcarchive \
+            DEVELOPMENT_TEAM="22X77ENQ2H" \
+            CODE_SIGN_STYLE="Manual"
 
       # 6. IPA 파일 생성
       - name: Export IPA file
