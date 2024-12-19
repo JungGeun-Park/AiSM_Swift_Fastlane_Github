@@ -93,10 +93,7 @@ platform :ios do
         provisioningProfiles: {
           bundle_id => ENV["PROFILE"]
         }
-      },
-      export_team_id: "#{team_id}",
-      xcargs: "CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{team_id}",
-      codesigning_identity: "Apple Distribution: Inka Entworks Inc. #{team_id}",
+      }
     )
 
     # .ipa 파일 경로 설정
