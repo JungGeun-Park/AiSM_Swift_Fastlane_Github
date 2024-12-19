@@ -49,8 +49,8 @@ jobs:
             DEVELOPMENT_TEAM="22X77ENQ2H" \
             CODE_SIGN_STYLE="Manual" \
             CODE_SIGN_IDENTITY="Apple Distribution: Inka Entworks Inc. (22X77ENQ2H)" \
-            OTHER_CODE_SIGN_FLAGS="--timestamp=none"
-            # PROVISIONING_PROFILE_SPECIFIER="AppSealing Wildcard Distribution Profile"
+            OTHER_CODE_SIGN_FLAGS="--timestamp=none" \
+            PROVISIONING_PROFILE_SPECIFIER="AppSealing Wildcard Distribution Profile"
 
       # 6. IPA 파일 생성
       - name: Export IPA file
