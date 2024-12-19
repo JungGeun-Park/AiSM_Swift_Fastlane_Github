@@ -95,16 +95,16 @@ jobs:
 
 
 
-      # 2. Install Fastlane using Homebrew
+      # 5. Install Fastlane using Homebrew
       - name: Install Fastlane
         run: |
           brew install fastlane
 
-      # 3. Run Fastlane lane for TestFlight upload
+      # 6. Run Fastlane lane for TestFlight upload
       - name: Run Fastlane Lane
         env:
           APPLE_ID: "puzznic@inka.co.kr"
           FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: "fcgx-cbfb-jsez-zbir"
           PROFILE: "AppSealing Wildcard Distribution Profile"
         run: |
-          fastlane beta
+          fastlane beta --verbose
