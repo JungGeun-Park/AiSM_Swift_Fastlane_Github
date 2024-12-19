@@ -35,7 +35,7 @@ jobs:
       - name: Set up Provisioning Profile from Project Folder
         run: |
           mkdir -p ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles
-          cp ./ProvisioningProfiles/AppSealing_Wildcard_Distribution_Profile.mobileprovision ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/
+          cp ./AppSealing_Wildcard_Distribution_Profile.mobileprovision ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/
 
       # 5. Xcode 빌드 및 아카이브
       - name: Build and Archive iOS App
