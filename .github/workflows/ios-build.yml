@@ -93,10 +93,17 @@ jobs:
       #       --password "$APPLE_APP_PASSWORD" \
       #       --verbose
 
-      # 3. Install Ruby and Fastlane
-      - name: Install Fastlane
+
+      # 2. Set up Ruby environment
+      - name: Set up Ruby environment
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '2.7' # Fastlane 호환 가능한 Ruby 버전
+
+      # 3. Install dependencies using Bundler
+      - name: Install dependencies
         run: |
-          gem install bundler fastlane
+          bundle install
 
       # 4. Run Fastlane lane for TestFlight upload
       - name: Run Fastlane Lane
