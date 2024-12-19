@@ -14,6 +14,7 @@
 # update_fastlane
 
 default_platform(:ios)
+xcversion(version: "16.0")
 
 before_all do
   ENV["FASTLANE_USER"] = "puzznic@inka.co.kr"
