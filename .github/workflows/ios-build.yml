@@ -39,8 +39,8 @@ jobs:
             -project AiSM_Swift_Fastlane_Github.xcodeproj \
             -scheme AiSM_Swift_Fastlane_Github \
             -archivePath ${{ runner.temp }}/AiSM_Swift_Fastlane_Github.xcarchive \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER="YourProvisioningProfileName"
+            CODE_SIGN_IDENTITY="Apple Distribution: Inka Entworks Inc. (22X77ENQ2H)" \
+            PROVISIONING_PROFILE_SPECIFIER="AppSealing_Wildcard_Distribution_Profile"
 
       # 5. IPA 파일 생성
       - name: Export IPA file
