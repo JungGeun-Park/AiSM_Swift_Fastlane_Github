@@ -100,11 +100,11 @@ jobs:
         with:
           ruby-version: '2.7' # Fastlane 호환 가능한 Ruby 버전
 
-      # 3. Install dependencies using Bundler
-      - name: Install dependencies
+      # 3. Install Fastlane using RubyGems
+      - name: Install Fastlane
         run: |
-          gem install bundler -v 2.4.22
-
+          gem install fastlane --no-document
+          
       # 4. Run Fastlane lane for TestFlight upload
       - name: Run Fastlane Lane
         # env:
