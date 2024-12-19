@@ -94,21 +94,13 @@ jobs:
       #       --verbose
 
 
-      # 2. Set up Ruby environment
-      - name: Set up Ruby environment
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '2.7' # Fastlane 호환 가능한 Ruby 버전
 
-      # 3. Install Fastlane using RubyGems
+      # 2. Install Fastlane using Homebrew
       - name: Install Fastlane
         run: |
-          gem install fastlane --no-document
-          
-      # 4. Run Fastlane lane for TestFlight upload
+          brew install fastlane
+
+      # 3. Run Fastlane lane for TestFlight upload
       - name: Run Fastlane Lane
-        # env:
-        #   APPLE_ID: "your_apple_id@example.com"
-        #   FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: "your_app_specific_password"
         run: |
-          bundle exec fastlane beta      
+          fastlane beta
