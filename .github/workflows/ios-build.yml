@@ -26,8 +26,11 @@ jobs:
           echo "${{ secrets.CERTIFICATE_P12_BASE64 }}" | base64 --decode > certificate.p12
           security create-keychain -p "temp_password" temp.keychain
           security import certificate.p12 -k temp.keychain -P "${{ secrets.CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
-          mkdir -p ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles
-          echo "${{ secrets.PROVISIONING_PROFILE_BASE64 }}" | base64 --decode > ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/YourProfile.mobileprovision
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "temp_password" temp.keychain
+          security list-keychains -s temp.keychain
+          security unlock-keychain -p "temp_password" temp.keychain
+          security set-keychain-settings -lut 3600 temp.keychain
+
 
       # 4. 프로비저닝 프로파일 설정
       - name: Set up Provisioning Profile from Project Folder
