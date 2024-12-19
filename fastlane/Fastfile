@@ -95,9 +95,8 @@ platform :ios do
         }
       },
       export_team_id: "#{team_id}",
-      xcargs: "-allowProvisioningUpdates CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{team_id}",
+      xcargs: "CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{team_id}",
       codesigning_identity: "Apple Distribution: Inka Entworks Inc. #{team_id}",
-      export_xcargs: "-allowProvisioningUpdates"      
     )
 
     # .ipa 파일 경로 설정
