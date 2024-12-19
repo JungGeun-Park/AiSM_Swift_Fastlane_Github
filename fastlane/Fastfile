@@ -94,8 +94,9 @@ platform :ios do
           bundle_id => ENV["PROFILE"]
         }
       },
-      xcargs: "-allowProvisioningUpdates",
-      codesigning_identity: "Apple Distribution: Inka Entworks Inc. (22X77ENQ2H)",
+      export_team_id: "#{team_id}",
+      xcargs: "-allowProvisioningUpdates CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{team_id}",
+      codesigning_identity: "Apple Distribution: Inka Entworks Inc. #{team_id}",
       export_xcargs: "-allowProvisioningUpdates"      
     )
 
