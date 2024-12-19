@@ -41,6 +41,7 @@ jobs:
       - name: Build and Archive iOS App
         run: |
           xcodebuild clean archive \
+            -allowProvisioningUpdates \
             -project AiSM_Swift_Fastlane_Github.xcodeproj \
             -scheme AiSM_Swift_Fastlane_Github \
             -archivePath ${{ runner.temp }}/AiSM_Swift_Fastlane_Github.xcarchive
