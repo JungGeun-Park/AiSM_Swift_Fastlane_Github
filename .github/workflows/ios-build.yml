@@ -1,0 +1,63 @@
+name: iOS Build and Upload to App Store
+
+on:
+  push:
+    branches:
+      - master  # master 브랜치에 푸시될 때 실행
+
+jobs:
+  build-and-upload:
+    runs-on: macos-latest
+
+    steps:
+      # 1. 코드 체크아웃
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. 인증서 및 개인 키 복원
+      - name: Restore Certificate and Private Key
+        run: |
+          echo "${{ secrets.CERTIFICATE_P12_BASE64 }}" | base64 --decode > certificate.p12
+          echo "${{ secrets.PRIVATE_KEY_P12_BASE64 }}" | base64 --decode > private-key.p12
+          security create-keychain -p "temp_password" temp.keychain
+          security import certificate.p12 -k temp.keychain -P "${{ secrets.CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
+          security import private-key.p12 -k temp.keychain -P "${{ secrets.PRIVATE_KEY_PASSWORD }}" -T /usr/bin/codesign
+          security list-keychains -s temp.keychain
+          security unlock-keychain -p "temp_password" temp.keychain
+
+      # 3. 프로비저닝 프로파일 설정
+      - name: Set up Provisioning Profile
+        run: |
+          echo "${{ secrets.PROVISIONING_PROFILE_BASE64 }}" | base64 --decode > profile.mobileprovision
+          mkdir -p ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles
+          cp profile.mobileprovision ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/
+
+      # 4. Xcode 빌드 및 아카이브
+      - name: Build and Archive iOS App
+        run: |
+          xcodebuild clean archive \
+            -project AiSM_Swift_Fastlane_Github.xcodeproj \
+            -scheme AiSM_Swift_Fastlane_Github \
+            -archivePath ${{ runner.temp }}/AiSM_Swift_Fastlane_Github.xcarchive \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="YourProvisioningProfileName"
+
+      # 5. IPA 파일 생성
+      - name: Export IPA file
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath ${{ runner.temp }}/AiSM_Swift_Fastlane_Github.xcarchive \
+            -exportPath ${{ runner.temp }}/build \
+            -exportOptionsPlist ExportOptions.plist
+
+      # 6. Upload IPA to App Store Connect using altool
+      - name: Upload IPA to App Store Connect
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          xcrun altool --upload-app \
+            --type ios \
+            --file ${{ runner.temp }}/build/AiSM_Swift_Fastlane_Github.ipa \
+            --username "$APPLE_ID" \
+            --password "$APPLE_APP_PASSWORD"
