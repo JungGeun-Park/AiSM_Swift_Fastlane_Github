@@ -60,8 +60,9 @@ jobs:
             -scheme AiSM_Swift_Fastlane_Github \
             -archivePath ${{ runner.temp }}/AiSM_Swift_Fastlane_Github.xcarchive \
             CODE_SIGN_STYLE="Manual" \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
-            DEVELOPMENT_TEAM="${{ secrets.TEAM_ID }}" \ 
+            DEVELOPMENT_TEAM="${{ secrets.TEAM_ID }}" \
+            OTHER_CODE_SIGN_FLAGS="--timestamp=none" \
+            CODE_SIGN_IDENTITY="Apple Distribution: Inka Entworks Inc. (22X77ENQ2H)" \
             PROVISIONING_PROFILE_SPECIFIER="AppSealing Wildcard Distribution Profile"
 
       # 6. Export IPA file with ExportOptions.plist
