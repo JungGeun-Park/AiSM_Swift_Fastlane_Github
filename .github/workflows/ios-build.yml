@@ -83,8 +83,14 @@ jobs:
             -exportOptionsPlist ./ExportOptions.plist
 
       # 8. Upload IPA as Artifact
-      - name: Upload IPA as Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: AiSM_Swift_Fastlane_Github-IPA
-          path: ${{ runner.temp }}/build/*.ipa
+      - name: Upload IPA to TestFlight
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          xcrun altool --upload-app \
+            --type ios \
+            --file ${{ runner.temp }}/build/AiSM_Swift_Fastlane_Github.ipa \
+            --username "$APPLE_ID" \
+            --password "$APPLE_APP_PASSWORD" \
+            --verbose
