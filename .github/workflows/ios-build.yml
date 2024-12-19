@@ -32,11 +32,10 @@ jobs:
           security unlock-keychain -p "temp_password" temp.keychain
 
       # 4. 프로비저닝 프로파일 설정
-      - name: Set up Provisioning Profile
+      - name: Set up Provisioning Profile from Project Folder
         run: |
-          echo "${{ secrets.PROVISIONING_PROFILE_BASE64 }}" | base64 --decode > profile.mobileprovision
           mkdir -p ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles
-          cp profile.mobileprovision ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/
+          cp ./ProvisioningProfiles/AppSealing_Wildcard_Distribution_Profile.mobileprovision ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/
 
       # 5. Xcode 빌드 및 아카이브
       - name: Build and Archive iOS App
@@ -46,7 +45,7 @@ jobs:
             -scheme AiSM_Swift_Fastlane_Github \
             -archivePath ${{ runner.temp }}/AiSM_Swift_Fastlane_Github.xcarchive \
             CODE_SIGN_IDENTITY="Apple Distribution: Inka Entworks Inc. (22X77ENQ2H)" \
-            PROVISIONING_PROFILE_SPECIFIER="AppSealing_Wildcard_Distribution_Profile"
+            PROVISIONING_PROFILE_SPECIFIER="AppSealing Wildcard Distribution Profile"
 
       # 6. IPA 파일 생성
       - name: Export IPA file
