@@ -1,73 +1,79 @@
-name: iOS Build and Upload to App Store
+name: iOS Build with Xcode 16
 
 on:
   push:
     branches:
-      - master  # master 브랜치에 푸시될 때 실행
+      - master
 
 jobs:
-  build-and-upload:
-    runs-on: macos-15  # macOS 15 이미지에서 실행 (Xcode 16 포함)
+  build-ios:
+    runs-on: macos-15  # macOS-15 이미지를 사용하여 Xcode 16 지원
 
     steps:
-      # 1. 코드 체크아웃
+      # 1. Checkout code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2. Xcode 버전 설정 (선택 사항)
-      - name: Setup Xcode Version
+      # 2. Setup Xcode version (Xcode 16)
+      - name: Setup Xcode 16
         uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: '16.0'
 
-      # 3. 인증서 및 개인 키 복원
+      # 3. Set up Signing Credentials
       - name: Set up Signing Credentials
         run: |
           echo "${{ secrets.CERTIFICATE_P12_BASE64 }}" | base64 --decode > certificate.p12
           security create-keychain -p "temp_password" temp.keychain
           security import certificate.p12 -k temp.keychain -P "${{ secrets.CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "temp_password" temp.keychain
-          security list-keychains -s temp.keychain
-          security unlock-keychain -p "temp_password" temp.keychain
-          security set-keychain-settings -lut 3600 temp.keychain
-
-
-      # 4. 프로비저닝 프로파일 설정
-      - name: Set up Provisioning Profile from Project Folder
-        run: |
           mkdir -p ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles
-          cp ./AppSealing_Wildcard_Distribution_Profile.mobileprovision ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/
+          echo "${{ secrets.PROVISIONING_PROFILE_BASE64 }}" | base64 --decode > ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/YourProfile.mobileprovision
 
-      # 5. Xcode 빌드 및 아카이브
-      - name: Build and Archive iOS App
+      # 4. Generate ExportOptions.plist
+      - name: Generate ExportOptions.plist
+        run: |
+          cat <<EOF > ExportOptions.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>app-store</string>
+              <key>teamID</key>
+              <string>${{ secrets.TEAM_ID }}</string>
+              <key>provisioningProfiles</key>
+              <dict>
+                  <key>com.example.app</key>
+                  <string>YourProvisioningProfileName</string>
+              </dict>
+              <key>signingStyle</key>
+              <string>manual</string>
+          </dict>
+          </plist>
+          EOF
+
+      # 5. Archive iOS App
+      - name: Archive iOS App
         run: |
           xcodebuild clean archive \
-            -allowProvisioningUpdates \
             -project AiSM_Swift_Fastlane_Github.xcodeproj \
             -scheme AiSM_Swift_Fastlane_Github \
             -archivePath ${{ runner.temp }}/AiSM_Swift_Fastlane_Github.xcarchive \
-            DEVELOPMENT_TEAM="22X77ENQ2H" \
             CODE_SIGN_STYLE="Manual" \
-            CODE_SIGN_IDENTITY="Apple Distribution: Inka Entworks Inc. (22X77ENQ2H)" \
-            OTHER_CODE_SIGN_FLAGS="--timestamp=none" \
-            PROVISIONING_PROFILE_SPECIFIER="AppSealing Wildcard Distribution Profile"
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            DEVELOPMENT_TEAM="${{ secrets.TEAM_ID }}"
 
-      # 6. IPA 파일 생성
+      # 6. Export IPA file with ExportOptions.plist
       - name: Export IPA file
         run: |
           xcodebuild -exportArchive \
             -archivePath ${{ runner.temp }}/AiSM_Swift_Fastlane_Github.xcarchive \
             -exportPath ${{ runner.temp }}/build \
-            -exportOptionsPlist ExportOptions.plist
+            -exportOptionsPlist ./ExportOptions.plist
 
-      # 7. Upload IPA to App Store Connect using altool
-      - name: Upload IPA to App Store Connect
-        env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
-        run: |
-          xcrun altool --upload-app \
-            --type ios \
-            --file ${{ runner.temp }}/build/AiSM_Swift_Fastlane_Github.ipa \
-            --username "$APPLE_ID" \
-            --password "$APPLE_APP_PASSWORD"
+      # 7. Upload IPA as Artifact
+      - name: Upload IPA as Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: AiSM_Swift_Fastlane_Github-IPA
+          path: ${{ runner.temp }}/build/*.ipa
