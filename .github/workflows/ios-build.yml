@@ -43,9 +43,7 @@ jobs:
           xcodebuild clean archive \
             -project AiSM_Swift_Fastlane_Github.xcodeproj \
             -scheme AiSM_Swift_Fastlane_Github \
-            -archivePath ${{ runner.temp }}/AiSM_Swift_Fastlane_Github.xcarchive \
-            CODE_SIGN_IDENTITY="Apple Distribution: Inka Entworks Inc. (22X77ENQ2H)" \
-            PROVISIONING_PROFILE_SPECIFIER="AppSealing Wildcard Distribution Profile"
+            -archivePath ${{ runner.temp }}/AiSM_Swift_Fastlane_Github.xcarchive
 
       # 6. IPA 파일 생성
       - name: Export IPA file
@@ -53,7 +51,9 @@ jobs:
           xcodebuild -exportArchive \
             -archivePath ${{ runner.temp }}/AiSM_Swift_Fastlane_Github.xcarchive \
             -exportPath ${{ runner.temp }}/build \
-            -exportOptionsPlist ExportOptions.plist
+            -exportOptionsPlist ExportOptions.plist \
+            CODE_SIGN_IDENTITY="Apple Distribution: Inka Entworks Inc. (22X77ENQ2H)" \
+            PROVISIONING_PROFILE_SPECIFIER="AppSealing Wildcard Distribution Profile"
 
       # 7. Upload IPA to App Store Connect using altool
       - name: Upload IPA to App Store Connect
