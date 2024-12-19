@@ -35,6 +35,22 @@ jobs:
         run: |
           mkdir -p ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles
           cp ./AppSealing_Wildcard_Distribution_Profile.mobileprovision ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/
+      
+      # 5. Install Fastlane using Homebrew
+      - name: Install Fastlane
+        run: |
+          brew install fastlane
+
+      # 6. Run Fastlane lane for TestFlight upload
+      - name: Run Fastlane Lane
+        env:
+          APPLE_ID: "puzznic@inka.co.kr"
+          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: "fcgx-cbfb-jsez-zbir"
+          PROFILE: "AppSealing Wildcard Distribution Profile"
+        run: |
+          fastlane beta --verbose
+
+
 
       # # 5. Generate ExportOptions.plist
       # - name: Generate ExportOptions.plist
@@ -95,16 +111,3 @@ jobs:
 
 
 
-      # 5. Install Fastlane using Homebrew
-      - name: Install Fastlane
-        run: |
-          brew install fastlane
-
-      # 6. Run Fastlane lane for TestFlight upload
-      - name: Run Fastlane Lane
-        env:
-          APPLE_ID: "puzznic@inka.co.kr"
-          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: "fcgx-cbfb-jsez-zbir"
-          PROFILE: "AppSealing Wildcard Distribution Profile"
-        run: |
-          fastlane beta --verbose
