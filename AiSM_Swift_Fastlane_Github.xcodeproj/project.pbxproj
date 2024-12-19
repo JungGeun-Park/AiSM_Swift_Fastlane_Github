@@ -6,8 +6,13 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		25982F4C2D13F69900623B09 /* libStaticAppSec.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 25982F4B2D13F69900623B09 /* libStaticAppSec.a */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		25982F112D13BDCD00623B09 /* AiSM_Swift_Fastlane_Github.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AiSM_Swift_Fastlane_Github.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		25982F4B2D13F69900623B09 /* libStaticAppSec.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libStaticAppSec.a; path = AppSealingSDK/Libraries/libStaticAppSec.a; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -36,6 +41,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				25982F4C2D13F69900623B09 /* libStaticAppSec.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -46,6 +52,7 @@
 			isa = PBXGroup;
 			children = (
 				25982F132D13BDCD00623B09 /* AiSM_Swift_Fastlane_Github */,
+				25982F4A2D13F69900623B09 /* Frameworks */,
 				25982F122D13BDCD00623B09 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -56,6 +63,14 @@
 				25982F112D13BDCD00623B09 /* AiSM_Swift_Fastlane_Github.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		25982F4A2D13F69900623B09 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				25982F4B2D13F69900623B09 /* libStaticAppSec.a */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -158,6 +173,10 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/AppSealingSDK/Libraries",
+				);
 				MARKETING_VERSION = 9.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.inka.swift;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -187,6 +206,10 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/AppSealingSDK/Libraries",
 				);
 				MARKETING_VERSION = 9.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.inka.swift;
