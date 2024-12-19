@@ -95,7 +95,7 @@ platform :ios do
           bundle_id => ENV["PROFILE"]
         }
       },
-      xcargs: "CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{team_id} PROVISIONING_PROFILE_SPECIFIER=#{ENV['PROFILE']}",
+      xcargs: "CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{team_id} PROVISIONING_PROFILE_SPECIFIER=\"#{ENV['PROFILE']}\"",
       codesigning_identity: "Apple Distribution"
     )
 
