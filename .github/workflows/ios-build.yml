@@ -46,8 +46,8 @@ jobs:
         env:
           APPLE_ID:  "puzznic@inka.co.kr"
           FASTLANE_USER: "puzznic@inka.co.kr"
-          FASTLANE_PASSWORD: "fcgx-cbfb-jsez-zbir"
-          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: "fcgx-cbfb-jsez-zbir"
+          FASTLANE_PASSWORD: "lqjz-mbha-sxrw-hdob"
+          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: "lqjz-mbha-sxrw-hdob"
           PROFILE: "AppSealing Wildcard Distribution Profile"
         run: |
           fastlane beta --verbose
