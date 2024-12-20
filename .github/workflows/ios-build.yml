@@ -45,7 +45,7 @@ jobs:
       - name: Run Fastlane Lane
         env:
           FASTLANE_USER: "puzznic@inka.co.kr"
-          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: "fcgx-cbfb-jsez-zbir"
+          FASTLANE_PASSWORD: "fcgx-cbfb-jsez-zbir"
           PROFILE: "AppSealing Wildcard Distribution Profile"
         run: |
           fastlane beta --verbose
