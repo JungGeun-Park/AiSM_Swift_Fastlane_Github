@@ -113,6 +113,9 @@ platform :ios do
     end    
     sh("'#{generate_hash_script}' '#{File.absolute_path(ipa_path)}'")
 
+    UI.message( "[AppSealing] User : #{ENV['FASTLANE_USER']}" )
+    UI.message( "[AppSealing] Pwd : #{ENV['FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD']}" )
+  
      # Step 2: Upload the IPA to TestFlight with callback
     begin
       upload_to_testflight(
