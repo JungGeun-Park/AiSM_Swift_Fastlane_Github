@@ -118,19 +118,11 @@ platform :ios do
     end    
     sh("'#{generate_hash_script}' '#{File.absolute_path(ipa_path)}'")
 
-    # App Store Connect API Key 설정
-    api_key = app_store_connect_api_key(
-      key_id: "9CRWDYHIG9MP", # API Key ID
-      issuer_id: "22X77ENQ2H", # Issuer ID
-      key_filepath: "#{fastlane_path}/AuthKey.json", # JSON 파일 경로
-      duration: 1200 # JWT 토큰 유효 기간 (최대 1200초)
-    )
-
      # Step 2: Upload the IPA to TestFlight with callback
     begin
       upload_to_testflight(
         ipa: ipa_path,
-        api_key: api_key,
+        api_key_path: "#{fastlane_path}/AuthKey.json", # JSON 파일 경로,
         skip_waiting_for_build_processing: true, # 빌드 처리 대기 시간 생략
       )      
       UI.success("[AppSealing] Upload to TestFlight completed successfully!")
