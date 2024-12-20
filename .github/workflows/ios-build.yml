@@ -44,10 +44,10 @@ jobs:
       # 6. Run Fastlane lane for TestFlight upload
       - name: Run Fastlane Lane
         env:
-          APPLE_ID:  ${{ secrets.APPLE_ID }}
-          FASTLANE_USER: ${{ secrets.APPLE_ID }}
-          FASTLANE_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
-          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_ID:  "puzznic@inka.co.kr"
+          FASTLANE_USER: "puzznic@inka.co.kr"
+          FASTLANE_PASSWORD: "fcgx-cbfb-jsez-zbir"
+          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: "fcgx-cbfb-jsez-zbir"
           PROFILE: "AppSealing Wildcard Distribution Profile"
         run: |
           fastlane beta --verbose
