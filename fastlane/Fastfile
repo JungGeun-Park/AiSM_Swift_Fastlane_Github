@@ -31,13 +31,24 @@ platform :ios do
     project_root = File.expand_path("..", __dir__)
     fastlane_path = File.expand_path(".", __dir__)
 
-    # App Store Connect API 인증 정보
-    KEY_ID = '7327KPS4U8' # App Store Connect에서 발급받은 Key ID
-    ISSUER_ID = '69a6de71-4a35-47e3-e053-5b8c7c11a4d1' # App Store Connect에서 발급받은 Issuer ID
-    PRIVATE_KEY_PATH = File.join(project_root, "AuthKey_7327KPS4U8.p8")
-    unless File.exist?(PRIVATE_KEY_PATH)
-      UI.user_error!("Private key file not found at path: #{PRIVATE_KEY_PATH}")
+    # # App Store Connect API 인증 정보
+    # KEY_ID = '7327KPS4U8' # App Store Connect에서 발급받은 Key ID
+    # ISSUER_ID = '69a6de71-4a35-47e3-e053-5b8c7c11a4d1' # App Store Connect에서 발급받은 Issuer ID
+    # PRIVATE_KEY_PATH = File.join(project_root, "AuthKey_7327KPS4U8.p8")
+    # unless File.exist?(PRIVATE_KEY_PATH)
+    #   UI.user_error!("Private key file not found at path: #{PRIVATE_KEY_PATH}")
+    # end
+    
+    # AuthKey.json 파일 경로 설정
+    auth_key_path = File.join(fastlane_path, "AuthKey.json")
+    unless File.exist?(auth_key_path)
+      UI.user_error!("AuthKey.json file not found at path: #{auth_key_path}")
     end
+
+    # App Store Connect API Key 설정
+    api_key = app_store_connect_api_key(
+      key_filepath: auth_key_path
+    )
 
     # Xcode 프로젝트(.xcodeproj) 또는 워크스페이스(.xcworkspace) 파일 자동 검색
     xcode_file_path = Dir.glob(File.join(project_root, "*.xcworkspace")).first || Dir.glob(File.join(project_root, "*.xcodeproj")).first
@@ -238,7 +249,7 @@ platform :ios do
     begin
       upload_to_testflight(
         ipa: ipa_path,
-        api_key_path: "#{fastlane_path}/AuthKey.json", # JSON 파일 경로,
+        api_key: api_key,
         skip_waiting_for_build_processing: true, # 빌드 처리 대기 시간 생략
       )      
       UI.success("[AppSealing] Upload to TestFlight completed successfully!")
