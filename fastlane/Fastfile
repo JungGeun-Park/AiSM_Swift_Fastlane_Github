@@ -97,7 +97,7 @@ platform :ios do
     UI.message "[AppSealing] Team ID: #{team_id}"
 
     # JWT 토큰 생성 함수
-    def generate_jwt_token(private_key_path)
+    def generate_jwt_token(private_key_content)
       private_key = OpenSSL::PKey::EC.new(private_key_content)      
       payload = {
         iss: ISSUER_ID,
