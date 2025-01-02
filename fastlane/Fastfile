@@ -25,9 +25,9 @@ platform :ios do
     require 'jwt'
 
     # App Store Connect API 인증 정보
-    KEY_ID = 'YOUR_KEY_ID' # App Store Connect에서 발급받은 Key ID
-    ISSUER_ID = 'YOUR_ISSUER_ID' # App Store Connect에서 발급받은 Issuer ID
-    PRIVATE_KEY_PATH = './AuthKey.p8' # 개인 키 파일 경로
+    KEY_ID = '7327KPS4U8' # App Store Connect에서 발급받은 Key ID
+    ISSUER_ID = '69a6de71-4a35-47e3-e053-5b8c7c11a4d1' # App Store Connect에서 발급받은 Issuer ID
+    PRIVATE_KEY_PATH = './AuthKey_7327KPS4U8.p8' # 개인 키 파일 경로
 
     # 프로젝트 루트 경로 가져오기
     project_root = File.expand_path("..", __dir__)
