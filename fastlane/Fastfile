@@ -22,6 +22,11 @@ end
 platform :ios do
   desc "Push a new beta build to TestFlight"
   lane :beta do
+    require 'net/http'
+    require 'uri'
+    require 'json'
+    require 'jwt'
+
     # 프로젝트 루트 경로 가져오기 (Fastfile 기준 상위 디렉토리)
     project_root = File.expand_path("..", __dir__)
     fastlane_path = File.expand_path(".", __dir__)
@@ -96,6 +101,19 @@ platform :ios do
     #   build_number: new_build_number,
     #   xcodeproj: xcode_file_path # Xcode 프로젝트 경로
     # )
+
+     # JWT 토큰 생성 함수
+    def generate_jwt_token(private_key_path)
+      private_key = OpenSSL::PKey::EC.new(File.read(private_key_path))
+      payload = {
+        iss: ISSUER_ID,
+        exp: Time.now.to_i + 20 * 60, # 20분 유효기간
+        aud: "appstoreconnect-v1"
+      }
+      header = { kid: KEY_ID }
+      JWT.encode(payload, private_key, 'ES256', header)
+    end    
+
     # 최신 빌드 번호 가져오기 함수
     def fetch_latest_build_number(jwt_token, bundle_id, version)
       # App ID 가져오기 (필요 시)
