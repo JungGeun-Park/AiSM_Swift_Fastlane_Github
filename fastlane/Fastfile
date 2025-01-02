@@ -89,20 +89,7 @@ platform :ios do
 
     UI.message "[AppSealing] Team ID: #{team_id}"
 
-    # # TestFlight에서 최신 빌드 번호 가져오기 및 증가
-    # latest_build_number = latest_testflight_build_number(
-    #   app_identifier: bundle_id,
-    #   api_key_path: "#{fastlane_path}/AuthKey.json" # API 키 JSON 파일 경로
-    # )
-
-    # new_build_number = (latest_build_number || 0) + 1
-
-    # increment_build_number(
-    #   build_number: new_build_number,
-    #   xcodeproj: xcode_file_path # Xcode 프로젝트 경로
-    # )
-
-     # JWT 토큰 생성 함수
+    # JWT 토큰 생성 함수
     def generate_jwt_token(private_key_path)
       private_key = OpenSSL::PKey::EC.new(File.read(private_key_path))
       payload = {
@@ -113,6 +100,19 @@ platform :ios do
       header = { kid: KEY_ID }
       JWT.encode(payload, private_key, 'ES256', header)
     end    
+
+    # Xcode 프로젝트에서 CFBundleShortVersionString (마케팅 버전) 가져오기 함수
+    def fetch_version_from_xcode(xcodeproj_path, scheme_name)
+      version_command = "xcodebuild -project #{xcodeproj_path} -scheme #{scheme_name} -showBuildSettings | grep MARKETING_VERSION | sed 's/[ ]*MARKETING_VERSION = //'"
+      version = `#{version_command}`.strip
+
+      if version.empty?
+        UI.user_error!("Failed to retrieve MARKETING_VERSION from Xcode project.")
+      end
+
+      UI.message("[AppSealing] Retrieved MARKETING_VERSION: #{version}")
+      version
+    end
 
     # 최신 빌드 번호 가져오기 함수
     def fetch_latest_build_number(jwt_token, bundle_id, version)
@@ -173,7 +173,7 @@ platform :ios do
 
     # JWT 토큰 생성 및 최신 빌드 번호 가져오기
     jwt_token = generate_jwt_token(PRIVATE_KEY_PATH)
-    version = "1.0.0" # 특정 버전 설정 (필요시 동적으로 추출 가능)
+    version = fetch_version_from_xcode(xcode_file_path, scheme_name)
     latest_build_number = fetch_latest_build_number(jwt_token, bundle_id, version)
 
     if latest_build_number.nil?
