@@ -32,11 +32,18 @@ platform :ios do
     fastlane_path = File.expand_path(".", __dir__)
 
     # App Store Connect API 인증 정보
-    KEY_ID = '7327KPS4U8' # App Store Connect에서 발급받은 Key ID
-    ISSUER_ID = '69a6de71-4a35-47e3-e053-5b8c7c11a4d1' # App Store Connect에서 발급받은 Issuer ID
-    PRIVATE_KEY_PATH = File.join(project_root, "AuthKey_7327KPS4U8.p8")
-    unless File.exist?(PRIVATE_KEY_PATH)
-      UI.user_error!("Private key file not found at path: #{PRIVATE_KEY_PATH}")
+    # KEY_ID = '7327KPS4U8' # App Store Connect에서 발급받은 Key ID
+    # ISSUER_ID = '69a6de71-4a35-47e3-e053-5b8c7c11a4d1' # App Store Connect에서 발급받은 Issuer ID
+    # PRIVATE_KEY_PATH = File.join(project_root, "AuthKey_7327KPS4U8.p8")
+    # unless File.exist?(PRIVATE_KEY_PATH)
+    #   UI.user_error!("Private key file not found at path: #{PRIVATE_KEY_PATH}")
+    # end
+    KEY_ID = ENV['APP_STORE_CONNECT_KEY_ID'] # GitHub Actions Secret에서 가져오기
+    ISSUER_ID = ENV['APP_STORE_CONNECT_ISSUER_ID'] # GitHub Actions Secret에서 가져오기
+    PRIVATE_KEY_CONTENT = ENV['APP_STORE_CONNECT_PRIVATE_KEY'] # 개인 키 내용을 환경 변수로 가져오기
+    
+    unless KEY_ID && ISSUER_ID && PRIVATE_KEY_CONTENT
+      UI.user_error!("Missing required App Store Connect credentials. Ensure APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID, and APP_STORE_CONNECT_PRIVATE_KEY are set as environment variables.")
     end
 
     # Xcode 프로젝트(.xcodeproj) 또는 워크스페이스(.xcworkspace) 파일 자동 검색
@@ -91,7 +98,7 @@ platform :ios do
 
     # JWT 토큰 생성 함수
     def generate_jwt_token(private_key_path)
-      private_key = OpenSSL::PKey::EC.new(File.read(private_key_path))
+      private_key = OpenSSL::PKey::EC.new(private_key_content)      
       payload = {
         iss: ISSUER_ID,
         exp: Time.now.to_i + 20 * 60, # 20분 유효기간
@@ -172,7 +179,7 @@ platform :ios do
     end
 
     # JWT 토큰 생성 및 최신 빌드 번호 가져오기
-    jwt_token = generate_jwt_token(PRIVATE_KEY_PATH)
+    jwt_token = generate_jwt_token(PRIVATE_KEY_CONTENT)
     version = fetch_version_from_xcode(xcode_file_path, scheme_name)
     latest_build_number = fetch_latest_build_number(jwt_token, bundle_id, version)
 
