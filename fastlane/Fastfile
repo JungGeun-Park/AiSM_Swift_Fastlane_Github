@@ -238,6 +238,12 @@ platform :ios do
     begin
       upload_to_testflight(
         ipa: ipa_path,
+        # api_key_path: "#{fastlane_path}/AuthKey.json", # JSON 파일 경로,
+        api_key: {
+          key_id: KEY_ID,
+          issuer_id: ISSUER_ID,
+          key: File.read(PRIVATE_KEY_PATH)
+        },
         skip_waiting_for_build_processing: true, # 빌드 처리 대기 시간 생략
       )      
       UI.success("[AppSealing] Upload to TestFlight completed successfully!")
