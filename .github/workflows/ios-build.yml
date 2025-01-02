@@ -3,7 +3,7 @@ name: iOS Build with Xcode 16
 on:
   push:
     branches:
-      - master
+      - develop
 
 jobs:
   build-ios:
