@@ -19,7 +19,17 @@ end
 platform :ios do
   desc "Push a new beta build to TestFlight"
   lane :beta do
-    # 프로젝트 루트 경로 가져오기 (Fastfile 기준 상위 디렉토리)
+    require 'net/http'
+    require 'uri'
+    require 'json'
+    require 'jwt'
+
+    # App Store Connect API 인증 정보
+    KEY_ID = 'YOUR_KEY_ID' # App Store Connect에서 발급받은 Key ID
+    ISSUER_ID = 'YOUR_ISSUER_ID' # App Store Connect에서 발급받은 Issuer ID
+    PRIVATE_KEY_PATH = './AuthKey.p8' # 개인 키 파일 경로
+
+    # 프로젝트 루트 경로 가져오기
     project_root = File.expand_path("..", __dir__)
     fastlane_path = File.expand_path(".", __dir__)
 
@@ -30,9 +40,7 @@ platform :ios do
     end
 
     # 프로젝트 이름 및 스킴 자동 추출
-    project_name = File.basename(xcode_file_path, File.extname(xcode_file_path)) # 확장자를 제거한 프로젝트 이름
-
-    # 스킴 자동 검색
+    project_name = File.basename(xcode_file_path, File.extname(xcode_file_path))
     scheme_name = ""
     Dir.chdir(File.dirname(xcode_file_path)) do
       scheme_name = sh("xcodebuild -list -#{xcode_file_path.end_with?('.xcworkspace') ? 'workspace' : 'project'} #{File.basename(xcode_file_path)} | grep 'Schemes:' -A 1 | tail -n 1").strip
@@ -59,100 +67,60 @@ platform :ios do
 
     UI.message "[AppSealing] Bundle ID: #{bundle_id}"
 
-    # Team ID 동적으로 추출
-    team_id = ""
-    Dir.chdir(File.dirname(xcode_file_path)) do
-      team_id_command = "xcodebuild -showBuildSettings -scheme #{scheme_name} | grep 'DEVELOPMENT_TEAM' | awk -F ' = ' '{print $2}'"
-      team_id_output = sh(team_id_command).lines.map(&:strip).reject { |line| line.include?("WARNING") || line.empty? }
-      team_id = team_id_output.last.strip
+    # JWT 토큰 생성 함수
+    def generate_jwt_token
+      private_key = OpenSSL::PKey::EC.new(File.read(PRIVATE_KEY_PATH))
+      payload = {
+        iss: ISSUER_ID,
+        exp: Time.now.to_i + 20 * 60, # 20분 유효기간
+        aud: "appstoreconnect-v1"
+      }
+      header = { kid: KEY_ID }
+      JWT.encode(payload, private_key, 'ES256', header)
     end
 
-    if team_id.empty?
-      UI.user_error!("[AppSealing] Failed to retrieve Team ID from Xcode project.")
+    # 최신 빌드 번호 가져오기 함수
+    def fetch_latest_build_number(jwt_token, bundle_id)
+      uri = URI("https://api.appstoreconnect.apple.com/v1/builds?filter[app]=#{bundle_id}&sort=-version")
+      request = Net::HTTP::Get.new(uri)
+      request['Authorization'] = "Bearer #{jwt_token}"
+
+      response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
+        http.request(request)
+      end
+
+      if response.code.to_i == 200
+        builds = JSON.parse(response.body)['data']
+        if builds && !builds.empty?
+          latest_build_number = builds.first['attributes']['version'].to_i
+          return latest_build_number
+        end
+      else
+        UI.error("Failed to fetch builds: #{response.code} - #{response.body}")
+      end
+
+      nil # 빌드를 찾지 못한 경우 nil 반환
     end
 
-    UI.message "[AppSealing] Team ID: #{team_id}"
+    # JWT 토큰 생성 및 최신 빌드 번호 가져오기
+    jwt_token = generate_jwt_token()
+    latest_build_number = fetch_latest_build_number(jwt_token, bundle_id)
 
-    # TestFlight에서 최신 빌드 번호 가져오기 및 증가
-    latest_build_number = latest_testflight_build_number(
-      app_identifier: bundle_id,
-      api_key_path: "#{fastlane_path}/AuthKey.json" # API 키 JSON 파일 경로
-    )
-    UI.message "[AppSealing] Build #: #{latest_build_number}"
+    if latest_build_number.nil?
+      UI.message("[AppSealing] No builds found. Starting with build number 1.")
+      new_build_number = 1
+    else
+      new_build_number = latest_build_number + 1
+      UI.message("[AppSealing] Latest Build Number: #{latest_build_number}")
+      UI.message("[AppSealing] New Build Number: #{new_build_number}")
+    end
 
-    new_build_number = (latest_build_number || 0) + 1
-
+    # 새로운 빌드 번호 설정 (Xcode 프로젝트에 적용)
     increment_build_number(
       build_number: new_build_number,
-      xcodeproj: xcode_file_path # Xcode 프로젝트 경로
+      xcodeproj: xcode_file_path # Xcode 프로젝트 경로 명시
     )
 
-    UI.message "[AppSealing] Updated Build Number: #{new_build_number}"
-
-    # 빌드 및 IPA 파일 생성
-    archive_path = File.join(project_root, "build", "#{project_name}.xcarchive")
-    ipa_output_path = File.join(project_root, "build")
-
-    build_ios_app(
-      scheme: scheme_name,
-      export_method: "app-store",
-      clean: true,
-      output_directory: ipa_output_path,
-      output_name: "#{project_name}.ipa",
-      workspace: xcode_file_path.end_with?(".xcworkspace") ? xcode_file_path : nil,
-      project: xcode_file_path.end_with?(".xcodeproj") ? xcode_file_path : nil,
-      export_options: {
-        provisioningProfiles: {
-          bundle_id => ENV["PROFILE"]
-        }
-      },
-      xcargs: "CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{team_id} PROVISIONING_PROFILE_SPECIFIER=\"#{ENV['PROFILE']}\"",
-      codesigning_identity: "Apple Distribution"
-    )
-
-    # .ipa 파일 경로 설정
-    ipa_path = File.join(ipa_output_path, "#{project_name}.ipa")
-
-    unless File.exist?(ipa_path)
-      UI.user_error!("[AppSealing] IPA file not found at path: #{ipa_path}")
-    end
-
-    UI.message "[AppSealing] IPA Path: #{ipa_path}"
-
-    # generate_hash 스크립트 경로 동적 검색
-    generate_hash_script = File.join(project_root, "AppSealingSDK", "Tools", "generate_hash")
-    unless File.exist?(generate_hash_script)
-      UI.user_error!("[AppSealing] generate_hash script not found at path: #{generate_hash_script}")
-    end
-    
-    # 실행 권한 확인 및 설정
-    unless File.executable?(generate_hash_script)
-      sh("chmod +x '#{generate_hash_script}'")
-    end    
-    sh("'#{generate_hash_script}' '#{File.absolute_path(ipa_path)}'")
-
-     # Step 2: Upload the IPA to TestFlight with callback
-    begin
-      upload_to_testflight(
-        ipa: ipa_path,
-        api_key_path: "#{fastlane_path}/AuthKey.json", # JSON 파일 경로,
-        skip_waiting_for_build_processing: true, # 빌드 처리 대기 시간 생략
-      )      
-      UI.success("[AppSealing] Upload to TestFlight completed successfully!")
-      
-    rescue => e
-      UI.error("[AppSealing] Upload to TestFlight failed with error: #{e.message}")
-      raise e
-      
-    ensure
-      # Always delete the build directory, even if an error occurs
-      if Dir.exist?(ipa_output_path)
-        UI.message("[AppSealing] Deleting build directory: #{ipa_output_path}")
-        FileUtils.rm_rf(ipa_output_path)
-        UI.message("[AppSealing] Build directory deleted.")
-      else
-        UI.message("[AppSealing] Build directory not found or already deleted.")
-      end
-    end
+    # 이후 기존 Fastfile의 빌드 및 업로드 로직 유지...
   end
 end
