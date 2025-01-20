@@ -177,7 +177,7 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/AppSealingSDK/Libraries",
 				);
-				MARKETING_VERSION = 9.7;
+				MARKETING_VERSION = 10.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.inka.swift;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -212,7 +212,7 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/AppSealingSDK/Libraries",
 				);
-				MARKETING_VERSION = 9.7;
+				MARKETING_VERSION = 10.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.inka.swift;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
