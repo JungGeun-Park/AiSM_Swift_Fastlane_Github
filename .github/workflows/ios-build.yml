@@ -34,7 +34,7 @@ jobs:
       - name: Set up Provisioning Profile from Project Folder
         run: |
           mkdir -p ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles
-          cp ./AppSealing_Wildcard_Distribution_Profile.mobileprovision ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/
+          cp ./distribution.mobileprovision ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/
       
       # 5. Install Fastlane using Homebrew
       - name: Install Fastlane
@@ -44,6 +44,7 @@ jobs:
       # 6. Run Fastlane lane for TestFlight upload
       - name: Run Fastlane Lane
         env:
+          PROFILE: "AppSealing Wildcard Distribution Profile"
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}

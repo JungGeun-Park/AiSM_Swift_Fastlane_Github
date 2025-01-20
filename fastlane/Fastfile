@@ -1,23 +1,4 @@
-# This file contains the fastlane.tools configuration
-# You can find the documentation at https://docs.fastlane.tools
-#
-# For a list of all available actions, check out
-#
-#     https://docs.fastlane.tools/actions
-#
-# For a list of all available plugins, check out
-#
-#     https://docs.fastlane.tools/plugins/available-plugins
-#
-
-# Uncomment the line if you want fastlane to automatically update itself
-# update_fastlane
-
 default_platform(:ios)
-
-before_all do
-  ENV['PROFILE'] = "AppSealing Wildcard Distribution Profile"
-end
 
 platform :ios do
   desc "Push a new beta build to TestFlight"
@@ -31,13 +12,6 @@ platform :ios do
     project_root = File.expand_path("..", __dir__)
     fastlane_path = File.expand_path(".", __dir__)
 
-    # App Store Connect API 인증 정보
-    # KEY_ID = '7327KPS4U8' # App Store Connect에서 발급받은 Key ID
-    # ISSUER_ID = '69a6de71-4a35-47e3-e053-5b8c7c11a4d1' # App Store Connect에서 발급받은 Issuer ID
-    # PRIVATE_KEY_PATH = File.join(project_root, "AuthKey_7327KPS4U8.p8")
-    # unless File.exist?(PRIVATE_KEY_PATH)
-    #   UI.user_error!("Private key file not found at path: #{PRIVATE_KEY_PATH}")
-    # end
     KEY_ID = ENV['APP_STORE_CONNECT_KEY_ID'] # GitHub Actions Secret에서 가져오기
     ISSUER_ID = ENV['APP_STORE_CONNECT_ISSUER_ID'] # GitHub Actions Secret에서 가져오기
     PRIVATE_KEY_CONTENT = ENV['APP_STORE_CONNECT_PRIVATE_KEY'] # 개인 키 내용을 환경 변수로 가져오기

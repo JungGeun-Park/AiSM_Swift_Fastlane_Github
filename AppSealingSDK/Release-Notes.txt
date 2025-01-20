@@ -2,8 +2,16 @@
 	AppSealing SDK Release Notes
 ==========================================
 
+Version 1.10.0.0 (January 31, 2025)
+	- Support Fastlane script for Xcode, Flutter, Unity3D, Cordova, Ionic, React Native project
+	- Support React Native 0.74.3, 0.75.x, 0.76.x
+	- Improved generate_hash to remove App Store Connect upload error after re-signing
+	- Fixed occasional Unity3D app crash due to anti-hooking logic
+	- Deprecated support for Xamarin project
+	- Deprecated support for React Native 0.64.x ~ 0.70.x
+
 Version 1.9.0.0 (June 3, 2024)
-    - Support anti-swizzling, anti-hooking and enhanced jailbreak detection
+	- Support anti-swizzling, anti-hooking and enhanced jailbreak detection
 	- Support Xcode Cloud integration
 	- Support React Native 0.74.x
 
@@ -12,7 +20,7 @@ Version 1.8.0.0 (April 3, 2024)
 	- Manual authorization step for “generate_genesis” when applying AppSelaing SDK has removed
 
 Version 1.7.0.0 (December 25, 2023)
-	- Support String Encryption for Swift / Objective-C
+	- Support String Encryption for Swift / Objecti27ve-C
 	- Fix upload error of Xamarin app with capability
 
 Version 1.6.0.0 (October 19, 2023)
