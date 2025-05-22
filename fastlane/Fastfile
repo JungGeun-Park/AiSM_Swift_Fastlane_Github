@@ -8,31 +8,6 @@ platform :ios do
     require 'json'
     require 'jwt'
 
-    def levenshtein_distance(str1, str2)
-      m = str1.length
-      n = str2.length
-      return m if n == 0
-      return n if m == 0
-    
-      d = Array.new(m+1) { Array.new(n+1) }
-    
-      (0..m).each { |i| d[i][0] = i }
-      (0..n).each { |j| d[0][j] = j }
-    
-      (1..m).each do |i|
-        (1..n).each do |j|
-          cost = (str1[i-1] == str2[j-1]) ? 0 : 1
-          d[i][j] = [
-            d[i-1][j] + 1,      # deletion
-            d[i][j-1] + 1,      # insertion
-            d[i-1][j-1] + cost  # substitution
-          ].min
-        end
-      end
-    
-      d[m][n]
-    end
-
     # Get project root path (parent directory of Fastfile)
     project_root = File.expand_path("..", __dir__)
     fastlane_path = File.expand_path(".", __dir__)
@@ -75,6 +50,31 @@ platform :ios do
 
     if scheme_list.empty?
       UI.user_error!("[AppSealing] No schemes found in the Xcode project or workspace.")
+    end
+
+    def levenshtein_distance(str1, str2)
+      m = str1.length
+      n = str2.length
+      return m if n == 0
+      return n if m == 0
+    
+      d = Array.new(m+1) { Array.new(n+1) }
+    
+      (0..m).each { |i| d[i][0] = i }
+      (0..n).each { |j| d[0][j] = j }
+    
+      (1..m).each do |i|
+        (1..n).each do |j|
+          cost = (str1[i-1] == str2[j-1]) ? 0 : 1
+          d[i][j] = [
+            d[i-1][j] + 1,      # deletion
+            d[i][j-1] + 1,      # insertion
+            d[i-1][j-1] + cost  # substitution
+          ].min
+        end
+      end
+    
+      d[m][n]
     end
 
     # Automatically select the scheme most similar to the project name
