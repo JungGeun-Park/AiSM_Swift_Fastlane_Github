@@ -32,7 +32,7 @@ platform :ios do
     
       d[m][n]
     end
-        
+
     # Get project root path (parent directory of Fastfile)
     project_root = File.expand_path("..", __dir__)
     fastlane_path = File.expand_path(".", __dir__)
@@ -56,14 +56,18 @@ platform :ios do
     # Get scheme list
     scheme_list = []
     Dir.chdir(File.dirname(xcode_file_path)) do
-      scheme_list_command = "xcodebuild -list -#{xcode_file_path.end_with?('.xcworkspace') ? 'workspace' : 'project'} #{File.basename(xcode_file_path)}"
-      scheme_list_output = sh(scheme_list_command).lines.map(&:strip).reject { |line| line.empty? }
-      scheme_list_output.each do |line|
-        if line.start_with?("Schemes:")
+      scheme_list_command = "xcodebuild -list -#{xcode_file_path.end_with?('.xcworkspace') ? 'workspace' : 'project'} \"#{File.basename(xcode_file_path)}\""
+      scheme_list_output = sh(scheme_list_command)
+      schemes_section = false
+      scheme_list_output.each_line do |line|
+        line = line.strip
+        if line == "Schemes:"
+          schemes_section = true
           next
-        elsif line.start_with?("Targets:")
-          break
-        else
+        end
+        if schemes_section
+          # Schemes section은 빈 줄로 끝남
+          break if line.empty?
           scheme_list << line
         end
       end
@@ -85,7 +89,7 @@ platform :ios do
     # Dynamically extract Bundle ID
     bundle_id = ""
     Dir.chdir(File.dirname(xcode_file_path)) do
-      bundle_id_command = "xcodebuild -showBuildSettings -scheme #{scheme_name} | grep 'PRODUCT_BUNDLE_IDENTIFIER' | awk -F ' = ' '{print $2}'"
+      bundle_id_command = "xcodebuild -showBuildSettings -scheme \"#{scheme_name}\" | grep 'PRODUCT_BUNDLE_IDENTIFIER' | awk -F ' = ' '{print $2}'"
       bundle_id_output = sh(bundle_id_command).lines.map(&:strip).reject { |line| line.include?("WARNING") || line.empty? }
       bundle_id = bundle_id_output.last.strip
     end
@@ -124,17 +128,15 @@ platform :ios do
 
     # Function to fetch CFBundleShortVersionString (MARKETING_VERSION) from Xcode project
     def fetch_version_from_xcode(xcodeproj_path, scheme_name)
-      version_command = "xcodebuild -project #{xcodeproj_path} -scheme #{scheme_name} -showBuildSettings | grep MARKETING_VERSION | sed 's/[ ]*MARKETING_VERSION = //'"
+      version_command = "xcodebuild -project \"#{xcodeproj_path}\" -scheme \"#{scheme_name}\" -showBuildSettings | grep MARKETING_VERSION | sed 's/[ ]*MARKETING_VERSION = //'"
       version = `#{version_command}`.strip
-
       if version.empty?
         UI.user_error!("Failed to retrieve MARKETING_VERSION from Xcode project.")
       end
-
       UI.message("[AppSealing] Retrieved MARKETING_VERSION: #{version}")
       version
     end
-
+    
     # Function to fetch the latest build number
     def fetch_latest_build_number(jwt_token, bundle_id, version)
       # Fetch App ID if needed
