@@ -1,0 +1,30 @@
+name: iOS Build & Deploy
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  release-ios:
+    name: Build and release iOS app
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - uses: actions/setup-ruby@v1
+        with:
+          ruby-version: '3.1.2'
+          
+      - name: Install Fastlane
+        run: cd ios && bundle install
+        
+      - name: Install pods
+        run: cd ios && pod install
+        
+      - name: Execute Fastlane
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          KEY_ID: ${{ secrets.KEY_ID }}
+          ISSUER_ID: ${{ secrets.ISSUER_ID }}
+        run: cd ios && fastlane release
