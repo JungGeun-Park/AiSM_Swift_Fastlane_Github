@@ -15,12 +15,12 @@ jobs:
         with:
           ruby-version: 3.2.2
           
+      - name: Install Bundler
+        run: gem install bundler
+
       - name: Install Fastlane
-        run: cd ios && bundle install
-        
-      - name: Install pods
-        run: cd ios && pod install
-        
+        run: bundle install
+                
       - name: Execute Fastlane
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
